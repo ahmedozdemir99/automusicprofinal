@@ -1,0 +1,6 @@
+{
+  "name": "AutoMusic Pro",
+  "description": "Android ve Android Auto destekli profesyonel müzik, Kur'an-ı Kerim, akıllı çevrimdışı indirme ve ekolayzır platformu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

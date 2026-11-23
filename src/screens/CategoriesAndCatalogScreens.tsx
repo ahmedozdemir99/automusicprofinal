@@ -1,0 +1,841 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Check,
+  ChevronLeft,
+  Heart,
+  Layers,
+  ListMusic,
+  Loader2,
+  Play,
+  Plus,
+  RefreshCw,
+  Search,
+  Shuffle,
+  Upload,
+} from 'lucide-react';
+import { ArtworkCover } from '../components/ArtworkCover';
+import { TrackRow } from '../components/TrackRow';
+import { useAutoMusic } from '../context/AutoMusicContext';
+import { RECITERS, SURAHS, buildSurahMediaItem } from '../data/quranData';
+import { normalizeSearchText } from '../services/catalogRepository';
+import { ArtistSummary, MediaItem } from '../types/media';
+
+// ============================================================
+// Screen 2: Müzik Kategorileri (All 17 + Multi-Category Joint Playlist + Add Category)
+// ============================================================
+export const CategoriesScreen: React.FC = () => {
+  const { categories, addCategory, navigate, loadCategoryTracks, createPlaylist, showToast } = useAutoMusic();
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newSubtitle, setNewSubtitle] = useState('');
+  const [newLanguage, setNewLanguage] = useState('Türkçe');
+  const [buildingCombined, setBuildingCombined] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleCreateCombinedPlaylist = async () => {
+    if (selectedIds.length < 2) {
+      showToast('Ortak liste için en az 2 kategori seçin.');
+      return;
+    }
+    setBuildingCombined(true);
+    try {
+      const combinedTracks: MediaItem[] = [];
+      for (const cid of selectedIds) {
+        const items = await loadCategoryTracks(cid);
+        combinedTracks.push(...items.slice(0, 12));
+      }
+      const names = categories
+        .filter((c) => selectedIds.includes(c.id))
+        .map((c) => c.name);
+      const pl = createPlaylist(
+        `Karma: ${names.slice(0, 2).join(' + ')}${names.length > 2 ? ` (+${names.length - 2})` : ''}`,
+        `${names.join(', ')} kategorilerinden ortak çalma listesi`,
+        combinedTracks,
+        false,
+        selectedIds
+      );
+      setMultiSelectMode(false);
+      setSelectedIds([]);
+      navigate({ name: 'playlist_detail', playlistId: pl.id });
+    } finally {
+      setBuildingCombined(false);
+    }
+  };
+
+  const handleAddCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    addCategory(newName, newSubtitle, newLanguage, newName);
+    setNewName('');
+    setNewSubtitle('');
+    setShowAddForm(false);
+  };
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Müzik Kategorileri</h1>
+          <p className="text-sm text-[#9B978E] mt-1">
+            {categories.length} ayrı kategori · Her kategoriye özel simge ve hazır veritabanı listeleri
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setMultiSelectMode((v) => !v);
+              setSelectedIds([]);
+            }}
+            className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-xs font-medium border transition-colors whitespace-nowrap ${
+              multiSelectMode
+                ? 'bg-[#D4AF37] text-[#09090B] border-[#D4AF37]'
+                : 'bg-[#141418] text-[#F5F2EB] border-white/10 hover:border-[#D4AF37]/40'
+            }`}
+          >
+            <Layers className="w-4 h-4 shrink-0" />
+            {multiSelectMode ? 'Seçimi İptal Et' : 'Ortak Liste Seç'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddForm((v) => !v)}
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-[#141418] hover:bg-[#1C1C22] border border-white/10 text-xs font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4 text-[#D4AF37] shrink-0" />
+            Yeni Kategori
+          </button>
+        </div>
+      </div>
+
+      {multiSelectMode && (
+        <div className="p-4 rounded-2xl bg-[#17150F] border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="text-sm text-[#F5F2EB]">
+            <span className="font-mono tabular-nums font-semibold text-[#D4AF37]">{selectedIds.length}</span>{' '}
+            kategori seçildi. Birden fazla kategori seçerek ortak çalma listesi oluşturabilirsiniz.
+          </div>
+          <button
+            type="button"
+            disabled={selectedIds.length < 2 || buildingCombined}
+            onClick={() => void handleCreateCombinedPlaylist()}
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-[#D4AF37] disabled:opacity-40 text-[#09090B] text-xs font-semibold whitespace-nowrap shrink-0"
+          >
+            {buildingCombined && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Ortak Çalma Listesi Oluştur
+          </button>
+        </div>
+      )}
+
+      {showAddForm && (
+        <form
+          onSubmit={handleAddCategory}
+          className="p-5 rounded-2xl bg-[#121216] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-4 gap-3 items-end"
+        >
+          <div className="space-y-1.5">
+            <label className="text-xs text-[#9B978E]">Kategori Adı</label>
+            <input
+              type="text"
+              required
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Örn: Klasik Enstrümantal"
+              className="w-full h-11 px-3.5 rounded-xl bg-[#0B0B0E] border border-white/10 text-sm text-[#F5F2EB] focus:border-[#D4AF37] focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-[#9B978E]">Açıklama</label>
+            <input
+              type="text"
+              value={newSubtitle}
+              onChange={(e) => setNewSubtitle(e.target.value)}
+              placeholder="Kısa kategori açıklaması"
+              className="w-full h-11 px-3.5 rounded-xl bg-[#0B0B0E] border border-white/10 text-sm text-[#F5F2EB] focus:border-[#D4AF37] focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-[#9B978E]">Dil</label>
+            <input
+              type="text"
+              value={newLanguage}
+              onChange={(e) => setNewLanguage(e.target.value)}
+              className="w-full h-11 px-3.5 rounded-xl bg-[#0B0B0E] border border-white/10 text-sm text-[#F5F2EB] focus:border-[#D4AF37] focus:outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            className="h-11 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors"
+          >
+            Kategoriyi Kaydet
+          </button>
+        </form>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {categories.map((cat) => {
+          const isSelected = selectedIds.includes(cat.id);
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => {
+                if (multiSelectMode) {
+                  toggleSelect(cat.id);
+                } else if (cat.isQuran) {
+                  navigate({ name: 'quran' });
+                } else {
+                  navigate({ name: 'track_list', categoryId: cat.id, title: cat.name });
+                }
+              }}
+              className={`group h-full p-4 rounded-2xl border text-left transition-colors flex items-center gap-4 ${
+                isSelected
+                  ? 'bg-[#1D1A10] border-[#D4AF37]'
+                  : 'bg-[#121216] hover:bg-[#19181F] border-white/[0.06] hover:border-[#D4AF37]/30'
+              }`}
+            >
+              <ArtworkCover motif={cat.motif} size="md" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-mono tabular-nums text-[#D4AF37]">
+                    {String(cat.order).padStart(2, '0')}
+                  </span>
+                  {multiSelectMode ? (
+                    <span
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                        isSelected ? 'bg-[#D4AF37] border-[#D4AF37] text-[#09090B]' : 'border-white/25'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3.5 h-3.5" />}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-[#7C7970] truncate">{cat.language}</span>
+                  )}
+                </div>
+                <p className="text-base font-semibold text-[#F5F2EB] truncate mt-0.5">{cat.name}</p>
+                <p className="text-xs text-[#9B978E] truncate mt-0.5">{cat.subtitle}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Screen 3: Sanatçı Listesi & Screen 4: Sanatçı Detayları
+// ============================================================
+export const ArtistsScreen: React.FC = () => {
+  const { catalogTracksByCategory, favoriteArtistIds, toggleFavoriteArtist, navigate } = useAutoMusic();
+  const [query, setQuery] = useState('');
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+
+  const artists = useMemo<ArtistSummary[]>(() => {
+    const map = new Map<string, ArtistSummary>();
+
+    // Include all 6 Quran reciters as authentic artists
+    for (const rec of RECITERS) {
+      map.set(`reciter:${rec.id}`, {
+        id: `reciter:${rec.id}`,
+        name: rec.nameTr,
+        categoryIds: ['kuran'],
+        language: 'Arapça',
+        genre: "Kur'an Tilaveti",
+        trackCount: 114,
+        motif: 'kuran',
+        isReciter: true,
+      });
+    }
+
+    // Aggregate database & local archive tracks by artist
+    for (const tracks of Object.values(catalogTracksByCategory)) {
+      for (const t of tracks) {
+        const existing = map.get(t.artistId);
+        if (existing) {
+          existing.trackCount += 1;
+          if (!existing.categoryIds.includes(t.categoryId)) {
+            existing.categoryIds.push(t.categoryId);
+          }
+        } else {
+          map.set(t.artistId, {
+            id: t.artistId,
+            name: t.artistName,
+            categoryIds: [t.categoryId],
+            language: t.language,
+            genre: t.genre,
+            trackCount: 1,
+            motif: t.motif,
+          });
+        }
+      }
+    }
+
+    return Array.from(map.values());
+  }, [catalogTracksByCategory]);
+
+  const filtered = useMemo(() => {
+    const norm = normalizeSearchText(query);
+    return artists.filter((a) => {
+      if (onlyFavorites && !favoriteArtistIds.includes(a.id)) return false;
+      if (!norm) return true;
+      return (
+        normalizeSearchText(a.name).includes(norm) ||
+        normalizeSearchText(a.genre).includes(norm) ||
+        normalizeSearchText(a.language).includes(norm)
+      );
+    });
+  }, [artists, favoriteArtistIds, onlyFavorites, query]);
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Sanatçılar ve Kariler</h1>
+          <p className="text-sm text-[#9B978E] mt-1">
+            Bir sanatçı seçerek tüm kayıtlarını sıralı veya karışık dinleyebilirsiniz
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-1 p-1 bg-[#141418] border border-white/[0.08] rounded-xl self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setOnlyFavorites(false)}
+            className={`h-8 px-3.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+              !onlyFavorites ? 'bg-[#D4AF37] text-[#09090B]' : 'text-[#A19E95] hover:text-[#F5F2EB]'
+            }`}
+          >
+            Tümü ({artists.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setOnlyFavorites(true)}
+            className={`h-8 px-3.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+              onlyFavorites ? 'bg-[#D4AF37] text-[#09090B]' : 'text-[#A19E95] hover:text-[#F5F2EB]'
+            }`}
+          >
+            Favoriler
+          </button>
+        </div>
+      </div>
+
+      <div className="relative max-w-md">
+        <Search className="w-4 h-4 text-[#8C887F] absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Sanatçı veya kari adına göre ara..."
+          className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#121216] border border-white/10 text-sm text-[#F5F2EB] placeholder:text-[#7C7970] focus:border-[#D4AF37] focus:outline-none"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map((artist) => {
+          const isFav = favoriteArtistIds.includes(artist.id);
+          return (
+            <div
+              key={artist.id}
+              className="p-4 rounded-2xl bg-[#121216] border border-white/[0.06] hover:border-[#D4AF37]/30 flex items-center justify-between gap-3 transition-colors"
+            >
+              <button
+                type="button"
+                onClick={() => navigate({ name: 'artist_detail', artistId: artist.id })}
+                className="flex items-center gap-3.5 min-w-0 text-left flex-1"
+              >
+                <ArtworkCover motif={artist.motif} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#F5F2EB] truncate">{artist.name}</p>
+                  <p className="text-xs text-[#9B978E] truncate mt-0.5">
+                    {artist.genre} · {artist.trackCount} kayıt
+                  </p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleFavoriteArtist(artist.id)}
+                aria-label="Sanatçıyı favorilere ekle"
+                className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-colors ${
+                  isFav ? 'text-[#D4AF37] bg-[#D4AF37]/10' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${isFav ? 'fill-[#D4AF37]' : ''}`} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export const ArtistDetailScreen: React.FC<{ artistId: string }> = ({ artistId }) => {
+  const { catalogTracksByCategory, favoriteArtistIds, toggleFavoriteArtist, playQueue, goBack, navigate } =
+    useAutoMusic();
+
+  const isReciter = artistId.startsWith('reciter:');
+  const reciter = isReciter ? RECITERS.find((r) => `reciter:${r.id}` === artistId) : undefined;
+
+  const tracks = useMemo<MediaItem[]>(() => {
+    if (reciter) {
+      return SURAHS.map((s) => buildSurahMediaItem(s, reciter));
+    }
+    return Object.values(catalogTracksByCategory)
+      .flat()
+      .filter((t) => t.artistId === artistId);
+  }, [artistId, catalogTracksByCategory, reciter]);
+
+  const artistName = reciter?.nameTr ?? tracks[0]?.artistName ?? 'Sanatçı';
+  const motif = reciter ? 'kuran' : tracks[0]?.motif ?? 'custom';
+  const isFav = favoriteArtistIds.includes(artistId);
+
+  return (
+    <div className="space-y-6 pb-10">
+      <button
+        type="button"
+        onClick={goBack}
+        className="inline-flex items-center gap-1.5 h-9 px-2 -ml-2 rounded-lg text-sm text-[#A19E95] hover:text-[#F5F2EB] transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Geri
+      </button>
+
+      <div className="p-6 rounded-3xl bg-[#121216] border border-white/[0.07] flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <ArtworkCover motif={motif} arabicTitle={reciter?.nameAr} size="lg" />
+        <div className="space-y-3 flex-1 min-w-0">
+          <p className="text-xs text-[#D4AF37]">{reciter ? "Kur'an-ı Kerim Karisi" : 'Sanatçı'}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">{artistName}</h1>
+          <p className="text-sm text-[#9B978E]">
+            {tracks.length} kayıt{reciter ? ` · ${reciter.style} · ${reciter.country}` : ''}
+          </p>
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 pt-1">
+            <button
+              type="button"
+              disabled={tracks.length === 0}
+              onClick={() => void playQueue(tracks, false)}
+              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] disabled:opacity-40 text-[#09090B] text-sm font-semibold transition-colors whitespace-nowrap"
+            >
+              <Play className="w-4 h-4 fill-current shrink-0" />
+              Sıralı Çal
+            </button>
+            <button
+              type="button"
+              disabled={tracks.length === 0}
+              onClick={() => void playQueue(tracks, true)}
+              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] disabled:opacity-40 border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+            >
+              <Shuffle className="w-4 h-4 text-[#D4AF37] shrink-0" />
+              Karışık Çal
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFavoriteArtist(artistId)}
+              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+            >
+              <Heart className={`w-4 h-4 shrink-0 ${isFav ? 'text-[#D4AF37] fill-[#D4AF37]' : 'text-[#9B978E]'}`} />
+              {isFav ? 'Favori Sanatçı' : 'Favorilere Ekle'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-[#121216] border border-white/[0.06] rounded-2xl p-2">
+        {tracks.map((item, idx) => (
+          <TrackRow
+            key={item.contentId}
+            item={item}
+            index={idx}
+            queueContext={tracks}
+            onOpenDetail={
+              item.surahNumber && item.reciterId
+                ? () =>
+                    navigate({
+                      name: 'surah_detail',
+                      surahNumber: item.surahNumber!,
+                      reciterId: item.reciterId!,
+                    })
+                : undefined
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Screen 5: Şarkı Listesi (Spotify-style DB Playlists + Filters + Phone Upload)
+// ============================================================
+
+const AlbumCover: React.FC<{imageUrl:string;title:string}> = ({imageUrl,title}) => {
+  const [failed,setFailed]=useState(false);
+  useEffect(()=>setFailed(false),[imageUrl]);
+  return <div className="aspect-square bg-gradient-to-br from-[#352619] via-[#191611] to-[#09090B] flex items-center justify-center relative overflow-hidden">
+    <ArtworkCover motif="nostalji" size="xl" className="!w-full !h-full !rounded-none !border-0" />
+    {!failed && imageUrl && <img src={imageUrl} alt={title+' albüm kapağı'} loading="lazy"
+      className="absolute inset-0 w-full h-full object-cover" onError={()=>setFailed(true)} />}
+    {failed && <span className="absolute bottom-1 left-1 right-1 text-center text-[10px] text-[#D4AF37] bg-black/60 rounded">Temsili kapak</span>}
+  </div>;
+};
+
+const VerifiedAndEmbeddedCatalog: React.FC<{ categoryId: string }> = ({ categoryId }) => {
+  const supported = categoryId !== 'kuran' && categoryId !== 'custom';
+  const [artists,setArtists] = useState<string[]>([]);
+  const [artist,setArtist] = useState('');
+  const [albums,setAlbums] = useState<Array<{id:string;title:string;year:string;coverUrl:string;sourceUrl:string}>>([]);
+  const [loading,setLoading] = useState(false);
+  const requestRef = useRef(0);
+  const [albumPage,setAlbumPage] = useState(0);
+  const [notice,setNotice] = useState('');
+  const [videoLink,setVideoLink] = useState('');
+  const [videoId,setVideoId] = useState('');
+  const [videoError,setVideoError] = useState('');
+  useEffect(() => {
+    requestRef.current += 1;
+    setArtist('');setAlbums([]);setArtists([]);setVideoId('');setVideoLink('');setAlbumPage(0);
+    if (!supported) return;
+    let active=true;
+    fetch('/api/catalog/verified?categoryId='+encodeURIComponent(categoryId))
+      .then(r=>{if(!r.ok)throw Error();return r.json();})
+      .then(d=>{if(active)setArtists(d.artists||[]);})
+      .catch(()=>{if(active)setNotice('Sanatçılar yüklenemedi.');});
+    return ()=>{active=false;};
+  },[categoryId,supported]);
+  const chooseArtist = async (name:string) => {
+    const requestId = ++requestRef.current;
+    setArtist(name);setAlbums([]);setAlbumPage(0);setNotice('');setLoading(true);
+    try {
+      const res=await fetch('/api/catalog/verified?categoryId='+encodeURIComponent(categoryId)+'&artist='+encodeURIComponent(name));
+      if(!res.ok)throw Error();
+      const data=await res.json();if(requestId!==requestRef.current)return;
+      setAlbums(data.albums||[]);setNotice(data.notice||'');
+    }catch{if(requestId===requestRef.current)setNotice('Albüm bilgileri şu anda yüklenemedi.');}
+    finally{if(requestId===requestRef.current)setLoading(false);}
+  };
+  const playVideo = () => {
+    try {
+      const url=new URL(videoLink.trim());
+      const host=url.hostname.toLowerCase();
+      let id='';
+      if(['youtu.be','www.youtu.be'].includes(host))id=url.pathname.split('/')[1]||'';
+      else if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(host))
+        id=url.pathname==='/watch'?(url.searchParams.get('v')||''):url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1]||'';
+      if(!/^[A-Za-z0-9_-]{11}$/.test(id))throw Error();
+      setVideoId(id);setVideoError('');
+    }catch{setVideoError('Geçerli bir YouTube video bağlantısı girin.');}
+  };
+  return <div className="space-y-4">
+    {supported && <section className="p-4 rounded-2xl border border-[#D4AF37]/20 bg-[#121216] space-y-3">
+      <h2 className="text-base font-semibold text-[#F5F2EB]">Gerçek sanatçılar ve albümleri</h2>
+      <p className="text-xs text-[#9B978E]">MusicBrainz albüm verileri; bunlar çalınabilir kayıt değildir.</p>
+      <div className="flex flex-wrap gap-2">{artists.map(name=><button type="button" key={name} onClick={()=>void chooseArtist(name)}
+        className={`px-3 py-2 rounded-lg text-xs border ${artist===name?'bg-[#D4AF37] text-black border-[#D4AF37]':'border-white/15 text-[#F5F2EB]'}`}>{name}</button>)}</div>
+      {loading && <p className="text-xs text-[#D4AF37]">Albümler yükleniyor…</p>}
+      {notice && <p className="text-xs text-[#9B978E]">{notice}</p>}
+      <p className="text-xs text-[#D4AF37]">{artist ? `${albums.length} albüm bulundu` : `${artists.length} sanatçı`}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">{albums.slice(0,(albumPage+1)*20).map(a=><div key={a.id} className="rounded-xl overflow-hidden border border-white/10">
+        <AlbumCover imageUrl={a.coverUrl} title={a.title} />
+        <div className="p-2"><p className="text-xs text-[#F5F2EB] line-clamp-2">{a.title}</p><p className="text-[11px] text-[#9B978E]">{a.year||'Yıl bilinmiyor'}</p></div>
+      </div>)}</div>
+      {albums.length>(albumPage+1)*20 && <button type="button" onClick={()=>setAlbumPage(p=>p+1)} className="rounded-lg border border-[#D4AF37]/40 px-4 py-2 text-xs text-[#D4AF37]">Daha fazla albüm göster</button>}
+    </section>}
+    <section className="p-4 rounded-2xl border border-white/10 bg-[#121216] space-y-3">
+      <h2 className="text-base font-semibold text-[#F5F2EB]">Uygulama içinde YouTube oynat</h2>
+      <p className="text-xs text-[#9B978E]">Resmî video bağlantısını yapıştırın. Gömülmeye izin verilen videolar burada açılır; oynatıcı görünür kalmalıdır.</p>
+      <form className="flex flex-col sm:flex-row gap-2" onSubmit={e=>{e.preventDefault();playVideo();}}>
+        <input type="url" value={videoLink} onChange={e=>setVideoLink(e.target.value)} aria-label="YouTube video bağlantısı" placeholder="YouTube video bağlantısı" className="flex-1 min-w-0 rounded-lg bg-black/30 border border-white/15 px-3 py-2 text-sm text-white" />
+        <button type="submit" className="rounded-lg bg-[#D4AF37] text-black font-semibold text-sm px-4 py-2">Uygulamada oynat</button>
+      </form>
+      {videoError && <p role="alert" className="text-xs text-amber-400">{videoError}</p>}
+      {videoId && <div className="aspect-video w-full bg-black rounded-xl overflow-hidden"><iframe key={videoId} title="YouTube oynatıcı" src={`https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1`} className="w-full h-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /></div>}
+    </section>
+  </div>;
+};
+
+export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> = ({ categoryId, title }) => {
+  const {
+    categories,
+    catalogTracksByCategory,
+    curatedPlaylistsByCategory,
+    catalogNotices,
+    loadingCategories,
+    loadCategoryTracks,
+    importLocalAudioFiles,
+    playQueue,
+    goBack,
+  } = useAutoMusic();
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [filterText, setFilterText] = useState('');
+  const [artistFilter, setArtistFilter] = useState('all');
+  const [formatFilter, setFormatFilter] = useState('all');
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+
+  const category = categories.find((c) => c.id === categoryId);
+  const allTracks = categoryId ? catalogTracksByCategory[categoryId] ?? [] : [];
+  const curatedPlaylists = categoryId ? curatedPlaylistsByCategory[categoryId] ?? [] : [];
+  const isLoading = categoryId ? Boolean(loadingCategories[categoryId]) : false;
+  const notice = categoryId ? catalogNotices[categoryId] : undefined;
+
+  useEffect(() => {
+    setActivePlaylistId(null);
+    setArtistFilter('all');
+    setFormatFilter('all');
+    setFilterText('');
+    if (categoryId && (!curatedPlaylistsByCategory[categoryId] || allTracks.length === 0)) {
+      void loadCategoryTracks(categoryId, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId]);
+
+  const activeCuratedPlaylist = curatedPlaylists.find((p) => p.id === activePlaylistId) ?? null;
+  const sourceTracks = activeCuratedPlaylist ? activeCuratedPlaylist.tracks : allTracks;
+
+  const artistOptions = useMemo(() => {
+    const set = new Set<string>();
+    sourceTracks.forEach((t) => set.add(t.artistName));
+    return Array.from(set).sort();
+  }, [sourceTracks]);
+
+  const filteredTracks = useMemo(() => {
+    const norm = normalizeSearchText(filterText);
+    return sourceTracks.filter((t) => {
+      if (artistFilter !== 'all' && t.artistName !== artistFilter) return false;
+      if (formatFilter !== 'all' && t.format !== formatFilter) return false;
+      if (!norm) return true;
+      return (
+        normalizeSearchText(t.title).includes(norm) ||
+        normalizeSearchText(t.artistName).includes(norm) ||
+        normalizeSearchText(t.album).includes(norm)
+      );
+    });
+  }, [artistFilter, filterText, formatFilter, sourceTracks]);
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div className="flex items-center justify-between gap-4">
+        <button
+          type="button"
+          onClick={goBack}
+          className="inline-flex items-center gap-1.5 h-9 px-2 -ml-2 rounded-lg text-sm text-[#A19E95] hover:text-[#F5F2EB] transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Kategoriler
+        </button>
+
+        {categoryId && (
+          <button
+            type="button"
+            onClick={() => void loadCategoryTracks(categoryId, true)}
+            className="inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl bg-[#141418] hover:bg-[#1C1C22] border border-white/10 text-xs font-medium text-[#CFCBC2] hover:text-[#D4AF37] transition-colors whitespace-nowrap"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isLoading ? 'animate-spin' : ''}`} />
+            Listeyi Yenile
+          </button>
+        )}
+      </div>
+
+      {/* Category Header */}
+      <div className="p-6 rounded-3xl bg-[#121216] border border-white/[0.07] flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <ArtworkCover motif={category?.motif ?? 'custom'} categoryId={categoryId} title={title} size="lg" />
+        <div className="space-y-3 flex-1 min-w-0">
+          <p className="text-xs font-medium text-[#D4AF37]">
+            {category ? `${category.language} · ${category.genre}` : 'Müzik Listesi'} · {allTracks.length} kayıt
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">{title}</h1>
+          {category && <p className="text-sm text-[#9B978E]">{category.subtitle}</p>}
+
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 pt-1">
+            <button
+              type="button"
+              disabled={filteredTracks.length === 0}
+              onClick={() => void playQueue(filteredTracks, false)}
+              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] disabled:opacity-40 hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors whitespace-nowrap"
+            >
+              <Play className="w-4 h-4 fill-current shrink-0" />
+              Sıralı Çal
+            </button>
+            <button
+              type="button"
+              disabled={filteredTracks.length === 0}
+              onClick={() => void playQueue(filteredTracks, true)}
+              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.05] disabled:opacity-40 hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+            >
+              <Shuffle className="w-4 h-4 text-[#D4AF37] shrink-0" />
+              Karışık Çal
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*,.mp3,.aac,.m4a,.flac,.wav,.ogg"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0 && categoryId) {
+                  void importLocalAudioFiles(e.target.files, categoryId);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+            >
+              <Upload className="w-4 h-4 text-[#D4AF37] shrink-0" />
+              Telefondan Ses Yükle
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {categoryId && categoryId !== 'kuran' && <VerifiedAndEmbeddedCatalog key={categoryId} categoryId={categoryId} />}
+
+      {/* Spotify-style Curated Database Playlists for this Category */}
+      {curatedPlaylists.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-base font-semibold text-[#F5F2EB] inline-flex items-center gap-2">
+              <ListMusic className="w-4 h-4 text-[#D4AF37]" />
+              Hazır Kategori Çalma Listeleri
+            </h2>
+            {activePlaylistId && (
+              <button
+                type="button"
+                onClick={() => setActivePlaylistId(null)}
+                className="text-xs font-medium text-[#D4AF37] hover:underline whitespace-nowrap"
+              >
+                Tüm Parçaları Göster
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {curatedPlaylists.map((pl) => {
+              const isSelected = activePlaylistId === pl.id;
+              return (
+                <div
+                  key={pl.id}
+                  className={`p-4 rounded-2xl border transition-colors flex items-center justify-between gap-3.5 ${
+                    isSelected
+                      ? 'bg-[#1B1810] border-[#D4AF37]/60'
+                      : 'bg-[#121216] border-white/[0.06] hover:border-[#D4AF37]/30'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setActivePlaylistId(isSelected ? null : pl.id)}
+                    className="flex items-center gap-3.5 min-w-0 text-left flex-1"
+                  >
+                    <ArtworkCover motif={pl.motif} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#F5F2EB] truncate">{pl.title}</p>
+                      <p className="text-xs text-[#D4AF37]/85 truncate mt-0.5">{pl.subtitle}</p>
+                      <p className="text-[11px] text-[#8C887F] truncate mt-0.5">
+                        {pl.tracks.length} kayıt · {pl.description}
+                      </p>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      disabled={pl.tracks.length === 0}
+                      onClick={() => void playQueue(pl.tracks, false)}
+                      aria-label={`${pl.title} listesini oynat`}
+                      className="w-10 h-10 rounded-full bg-[#D4AF37] hover:bg-[#E5C158] disabled:opacity-40 text-[#09090B] flex items-center justify-center transition-transform active:scale-95"
+                    >
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pl.tracks.length === 0}
+                      onClick={() => void playQueue(pl.tracks, true)}
+                      aria-label={`${pl.title} karışık oynat`}
+                      className="w-10 h-10 rounded-full bg-white/[0.06] hover:bg-white/[0.12] disabled:opacity-40 text-[#F5F2EB] flex items-center justify-center transition-colors"
+                    >
+                      <Shuffle className="w-4 h-4 text-[#D4AF37]" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Filters Row (Sanatçı, Albüm, Format — Uniform h-11 Height) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="relative">
+          <Search className="w-4 h-4 text-[#8C887F] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            placeholder="Şarkı, sanatçı veya albüm filtrele..."
+            className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#121216] border border-white/10 text-sm text-[#F5F2EB] placeholder:text-[#7C7970] focus:border-[#D4AF37] focus:outline-none"
+          />
+        </div>
+        <select
+          value={artistFilter}
+          onChange={(e) => setArtistFilter(e.target.value)}
+          aria-label="Sanatçıya göre filtrele"
+          className="h-11 px-3.5 rounded-xl bg-[#121216] border border-white/10 text-sm text-[#F5F2EB] focus:border-[#D4AF37] focus:outline-none"
+        >
+          <option value="all">Tüm Sanatçılar ({artistOptions.length})</option>
+          {artistOptions.map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </select>
+        <select
+          value={formatFilter}
+          onChange={(e) => setFormatFilter(e.target.value)}
+          aria-label="Ses formatına göre filtrele"
+          className="h-11 px-3.5 rounded-xl bg-[#121216] border border-white/10 text-sm text-[#F5F2EB] focus:border-[#D4AF37] focus:outline-none"
+        >
+          <option value="all">Tüm Formatlar (MP3 / AAC / FLAC / OGG)</option>
+          <option value="MP3">MP3</option>
+          <option value="FLAC">FLAC</option>
+          <option value="AAC">AAC</option>
+          <option value="OGG">OGG</option>
+        </select>
+      </div>
+
+      {/* Track List or Transparent Upload Fallback */}
+      {isLoading ? (
+        <div className="p-12 rounded-2xl bg-[#121216] border border-white/[0.06] flex flex-col items-center justify-center gap-3 text-center">
+          <Loader2 className="w-6 h-6 text-[#D4AF37] animate-spin" />
+          <p className="text-sm text-[#9B978E]">Veritabanı listeleri ve kayıtlar yükleniyor...</p>
+        </div>
+      ) : filteredTracks.length === 0 ? (
+        <div className="p-8 rounded-2xl bg-[#121216] border border-white/[0.06] space-y-4">
+          <p className="text-base font-semibold text-[#F5F2EB]">
+            Bu listede eşleşen çevrimiçi kayıt bulunamadı
+          </p>
+          <p className="text-sm text-[#9B978E] max-w-2xl leading-relaxed">
+            {notice ||
+              'Telefonunuzdaki veya cihazınızdaki MP3, AAC, FLAC ya da OGG dosyalarını doğrudan bu kategoriye ekleyerek çevrimdışı arşivde yüksek kalitede dinleyebilirsiniz.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors"
+          >
+            <Upload className="w-4 h-4 shrink-0" />
+            Telefondan Ses Dosyası Yükle
+          </button>
+        </div>
+      ) : (
+        <div className="bg-[#121216] border border-white/[0.06] rounded-2xl p-2">
+          {filteredTracks.map((item, idx) => (
+            <TrackRow key={item.contentId} item={item} index={idx} queueContext={filteredTracks} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
+  <defs>
+    <radialGradient id="bgMaskGrad" cx="50%" cy="38%" r="68%">
+      <stop offset="0%" stop-color="#1A1711" />
+      <stop offset="60%" stop-color="#0E0E11" />
+      <stop offset="100%" stop-color="#09090B" />
+    </radialGradient>
+    <linearGradient id="goldMask" x1="150" y1="130" x2="370" y2="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F2D785" />
+      <stop offset="50%" stop-color="#D4AF37" />
+      <stop offset="100%" stop-color="#A68222" />
+    </linearGradient>
+    <linearGradient id="ringMask" x1="120" y1="120" x2="392" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F0D57A" stop-opacity="0.55" />
+      <stop offset="50%" stop-color="#D4AF37" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0.45" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full-Bleed Solid Canvas for Android Maskable Safe-Zone Compliance -->
+  <rect width="512" height="512" fill="url(#bgMaskGrad)" />
+
+  <!-- Centered Emblem strictly inside 74% Maskable Safe Zone (~13% padding on all edges) -->
+  <g transform="translate(256 256) scale(0.74) translate(-256 -256)">
+    <circle cx="256" cy="256" r="184" stroke="url(#ringMask)" stroke-width="5" />
+    <path
+      d="M196 174.5C196 164.8 206.6 158.9 214.8 164.1L314.5 227.6C322.1 232.4 322.1 243.6 314.5 248.4L214.8 311.9C206.6 317.1 196 311.2 196 301.5V174.5Z"
+      transform="translate(-14, 18)"
+      fill="url(#goldMask)"
+    />
+    <path
+      d="M326 206C344.5 221.2 355 237.8 355 256C355 274.2 344.5 290.8 326 306"
+      stroke="url(#goldMask)"
+      stroke-width="16"
+      stroke-linecap="round"
+    />
+    <path
+      d="M362 174C389.5 196.8 404 224.2 404 256C404 287.8 389.5 315.2 362 338"
+      stroke="url(#goldMask)"
+      stroke-opacity="0.72"
+      stroke-width="14"
+      stroke-linecap="round"
+    />
+  </g>
+</svg>
