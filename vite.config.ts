@@ -11,7 +11,7 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         includeAssets: [
           'favicon.ico',
           'icon.svg',
@@ -25,7 +25,7 @@ export default defineConfig(() => {
           name: 'AutoMusic Pro',
           short_name: 'AutoMusic',
           description:
-            "Profesyonel ses kalitesi, 17 müzik kategorisi, 114 surelik Kur'an-ı Kerim arşivi, akıllı çevrimdışı indirme ve Araba Modu.",
+            "Profesyonel 10 bantlı ekolayzır, 18 müzik kategorisi, 114 surelik Kur'an-ı Kerim arşivi, çevrimdışı indirme ve Araç Modu.",
           lang: 'tr',
           theme_color: '#09090B',
           background_color: '#09090B',
@@ -56,9 +56,14 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [
+            {
+              urlPattern: /\/api\/audio\/proxy/i,
+              handler: 'NetworkOnly',
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',

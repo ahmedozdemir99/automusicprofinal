@@ -1,4 +1,4 @@
-import { MediaItem, Reciter, SurahInfo } from '../types/media';
+import type { MediaItem, Reciter, SurahInfo } from '../types/media.ts';
 
 // Verified HTTP 200 direct CDN endpoints for all 6 reciters (zero redirect hops)
 export const RECITERS: Reciter[] = [
@@ -241,11 +241,33 @@ export function getFallbackStreamUrl(item: MediaItem): string | null {
   return `${reciter.fallbackBaseUrl}/${pad3(item.surahNumber)}.mp3`;
 }
 
+const VALID_MOTIFS = new Set<string>([
+  'nostalji',
+  'karadeniz',
+  'arapca',
+  'azerice',
+  'lazca',
+  'turkuler',
+  'arabesk',
+  'fantezi',
+  'turk_sanat',
+  'turk_pop',
+  'turk_rock',
+  'ozgun',
+  'ilahi',
+  'ezgi',
+  'nesid',
+  'zikirli_ilahiler',
+  'tasavvuf',
+  'kuran',
+  'custom',
+]);
+
 export function normalizeMotif(motif: string | undefined): MediaItem['motif'] {
   if (!motif) return 'custom';
   if (motif === 'quran') return 'kuran';
   if (motif === 'studio') return 'custom';
-  return motif as MediaItem['motif'];
+  return (VALID_MOTIFS.has(motif) ? motif : 'custom') as MediaItem['motif'];
 }
 
 /**

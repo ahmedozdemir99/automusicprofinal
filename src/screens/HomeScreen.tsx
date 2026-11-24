@@ -66,13 +66,13 @@ export const HomeScreen: React.FC = () => {
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-8 space-y-4">
             <p className="text-xs font-medium text-[#D4AF37]">
-              Android &amp; Android Auto · Çevrimiçi ve Çevrimdışı Ses Deneyimi
+              PWA &amp; Bluetooth Araç Medya · Çevrimiçi ve Çevrimdışı Ses Deneyimi
             </p>
             <h1 className="text-3xl sm:text-4xl font-bold text-[#F5F2EB] tracking-tight leading-tight text-balance">
               Yolda ve her an saf ses kalitesiyle müzik ve Kur'an-ı Kerim
             </h1>
             <p className="text-sm sm:text-base text-[#A8A49B] max-w-2xl leading-relaxed">
-              17 müzik kategorisi, 114 surelik Kur'an-ı Kerim arşivi, akıllı tek seferlik çevrimdışı kayıt ve araç akustiğine özel ekolayzır tek çatı altında.
+              {categories.length} müzik kategorisi, 114 surelik Kur'an-ı Kerim arşivi, akıllı çevrimdışı kayıt ve gerçek 10 bantlı ekolayzır tek çatı altında.
             </p>
             <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 pt-2">
               <button
@@ -89,7 +89,7 @@ export const HomeScreen: React.FC = () => {
                 className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
               >
                 <Car className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                Araba Modu
+                Araç Modu
               </button>
               <PWAInstallButton variant="primary" />
             </div>
@@ -177,7 +177,7 @@ export const HomeScreen: React.FC = () => {
           <div>
             <h2 className="text-xl font-semibold text-[#F5F2EB]">Müzik Kategorileri</h2>
             <p className="text-xs text-[#9B978E] mt-0.5">
-              Türkçe ağırlıklı 17 özel kategori · Her kategoriye özgün sembol ve hazır listeler
+              Türkçe ağırlıklı {categories.length} özel kategori · Her kategoriye özgün sembol ve hazır listeler
             </p>
           </div>
           <button

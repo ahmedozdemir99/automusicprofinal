@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Download,
   Heart,
+  ListEnd,
   ListPlus,
   Loader2,
   Pause,
@@ -25,6 +26,13 @@ export function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+const TRACK_TYPE_LABELS: Partial<Record<NonNullable<MediaItem['trackType']>, string>> = {
+  live: 'Canlı',
+  remix: 'Remix',
+  cover: 'Cover',
+  karaoke: 'Karaoke',
+};
+
 interface TrackRowProps {
   item: MediaItem;
   index?: number;
@@ -46,6 +54,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
     isBuffering,
     playTrack,
     togglePlay,
+    addToQueueNext,
     isTrackFavorite,
     toggleFavoriteTrack,
     isOfflineDownloaded,
@@ -63,6 +72,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
   const isDownloaded = isOfflineDownloaded(item.contentId);
   const dlProgress = downloadProgressMap[item.contentId];
   const resume = resumePoints[item.contentId];
+  const trackTypeLabel = item.trackType ? TRACK_TYPE_LABELS[item.trackType] : undefined;
 
   const handlePrimaryClick = () => {
     if (isCurrent) {
@@ -126,6 +136,11 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           >
             {item.title}
           </button>
+          {trackTypeLabel && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-[#C9B370] shrink-0">
+              {trackTypeLabel}
+            </span>
+          )}
           {item.arabicTitle && (
             <span className="hidden sm:inline font-arabic text-sm text-[#D4AF37]/80 shrink-0" dir="rtl">
               {item.arabicTitle}
@@ -135,6 +150,12 @@ export const TrackRow: React.FC<TrackRowProps> = ({
 
         <div className="flex items-center gap-1.5 text-xs text-[#9B978E] truncate mt-0.5">
           <span className="truncate">{item.artistName}</span>
+          {item.year && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="font-mono tabular-nums shrink-0">{item.year}</span>
+            </>
+          )}
           <span aria-hidden="true">·</span>
           <span className="font-mono tabular-nums shrink-0">{item.format}</span>
           {item.bitrateKbps && (
@@ -225,13 +246,13 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           <Heart className={`w-4 h-4 ${isFav ? 'fill-[#D4AF37]' : ''}`} />
         </button>
 
-        {/* Add to Playlist Popover */}
+        {/* Add to Queue Next / Playlist Popover */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setShowPlaylistMenu((v) => !v)}
-            title="Çalma listesine ekle"
-            aria-label="Çalma listesine ekle"
+            title="Sıraya veya listeye ekle"
+            aria-label="Sıraya veya listeye ekle"
             className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.06] transition-colors"
           >
             <ListPlus className="w-4 h-4" />
@@ -243,31 +264,44 @@ export const TrackRow: React.FC<TrackRowProps> = ({
                 className="fixed inset-0 z-30"
                 onClick={() => setShowPlaylistMenu(false)}
               />
-              <div className="absolute right-0 top-11 z-40 w-56 rounded-xl bg-[#18181D] border border-white/10 shadow-2xl p-2">
-                <p className="px-2.5 py-1.5 text-xs font-medium text-[#9B978E]">
-                  Listeye Ekle
-                </p>
-                {playlists.length === 0 ? (
-                  <p className="px-2.5 py-2 text-xs text-[#7C7970]">
-                    Henüz çalma listeniz yok.
+              <div className="absolute right-0 top-11 z-40 w-56 rounded-xl bg-[#18181D] border border-white/10 shadow-2xl p-2 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    addToQueueNext(item);
+                    setShowPlaylistMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 text-left px-2.5 py-2 rounded-lg text-xs font-medium text-[#E5C158] hover:bg-white/[0.08] transition-colors"
+                >
+                  <ListEnd className="w-3.5 h-3.5 shrink-0" />
+                  Sıradaki Olarak Çal
+                </button>
+                <div className="border-t border-white/[0.08] pt-1">
+                  <p className="px-2.5 py-1 text-[11px] font-medium text-[#9B978E]">
+                    Çalma Listesine Ekle
                   </p>
-                ) : (
-                  <div className="max-h-48 overflow-y-auto space-y-0.5">
-                    {playlists.map((pl) => (
-                      <button
-                        key={pl.id}
-                        type="button"
-                        onClick={() => {
-                          addTrackToPlaylist(pl.id, item);
-                          setShowPlaylistMenu(false);
-                        }}
-                        className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-[#F5F2EB] hover:bg-white/[0.08] truncate transition-colors"
-                      >
-                        {pl.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  {playlists.length === 0 ? (
+                    <p className="px-2.5 py-1.5 text-xs text-[#7C7970]">
+                      Henüz çalma listeniz yok.
+                    </p>
+                  ) : (
+                    <div className="max-h-44 overflow-y-auto space-y-0.5">
+                      {playlists.map((pl) => (
+                        <button
+                          key={pl.id}
+                          type="button"
+                          onClick={() => {
+                            addTrackToPlaylist(pl.id, item);
+                            setShowPlaylistMenu(false);
+                          }}
+                          className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-[#F5F2EB] hover:bg-white/[0.08] truncate transition-colors"
+                        >
+                          {pl.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

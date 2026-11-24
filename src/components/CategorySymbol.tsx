@@ -107,6 +107,18 @@ export const CategorySymbol: React.FC<CategorySymbolProps> = ({
         </svg>
       );
 
+    // 7b. Fantezi — Sahne Mikrofonu & Akustik Yay
+    case 'fantezi':
+      return (
+        <svg {...common}>
+          <rect x="12" y="5" width="8" height="12" rx="4" />
+          <path d="M9 14a7 7 0 0 0 14 0" />
+          <path d="M16 21v6" />
+          <path d="M12 27h8" />
+          <path d="M13.5 9h5M13.5 12h5" strokeOpacity="0.55" />
+        </svg>
+      );
+
     // 8. Türk sanat müziği — Klasik Kanun (Trapez gövde ve paralel teller)
     case 'turk_sanat':
       return (

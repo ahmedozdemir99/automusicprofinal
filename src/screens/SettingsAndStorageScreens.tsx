@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Car,
   CheckCircle2,
@@ -7,14 +7,18 @@ import {
   HardDrive,
   Headphones,
   Play,
+  Plus,
+  RotateCcw,
+  Save,
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { PWAInstallButton } from '../components/PWAInstallButton';
 import { TrackRow } from '../components/TrackRow';
 import { useAutoMusic } from '../context/AutoMusicContext';
-import { EQ_FREQUENCIES, EQ_PRESETS } from '../services/audioEngine';
+import { EQ_FREQ_LABELS, EQ_FREQUENCIES, EQ_PRESETS, sharedAudioEngine } from '../services/audioEngine';
 import { formatBytesGb } from '../services/offlineDb';
 import { EqPresetId } from '../types/media';
 
@@ -193,7 +197,7 @@ export const StorageManagementScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Exact Default Smart One-Time Download Controls */}
+      {/* Smart One-Time Download Controls */}
       <section className="p-6 rounded-3xl bg-[#121216] border border-white/[0.07] space-y-5">
         <h2 className="text-lg font-semibold text-[#F5F2EB]">Akıllı Tek Seferlik İndirme Kuralları</h2>
 
@@ -248,7 +252,7 @@ export const StorageManagementScreen: React.FC = () => {
           </select>
         </div>
 
-        {/* Manual Explicit Clear (Never automatic!) */}
+        {/* Manual Explicit Clear */}
         <div className="pt-4 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-[#9B978E]">
             Kayıtlar siz onay vermeden asla otomatik silinmez.
@@ -290,15 +294,73 @@ export const StorageManagementScreen: React.FC = () => {
 };
 
 // ============================================================
-// Screen 16: Ses Ayarları & Canlı 5-Bant Ekolayzır
+// Screen 16: Ses Ayarları & Profesyonel 10-Bant Web Audio DSP Ekolayzır
 // ============================================================
 export const AudioSettingsScreen: React.FC = () => {
-  const { eqSettings, isEqSupported, updateEqSettings, applyEqPreset, setEqBand, goBack } = useAutoMusic();
+  const {
+    eqSettings,
+    isEqSupported,
+    isPlaying,
+    updateEqSettings,
+    applyEqPreset,
+    setEqBand,
+    saveCustomEqProfile,
+    deleteCustomEqProfile,
+    applyCustomEqProfile,
+    goBack,
+  } = useAutoMusic();
 
-  const presetKeys: EqPresetId[] = ['flat', 'car', 'headphones', 'bass_boost', 'vocal_quran', 'tasavvuf'];
+  const [newProfileName, setNewProfileName] = useState('');
+  const spectrumRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    let rafId = 0;
+    const draw = () => {
+      const canvas = spectrumRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const w = canvas.width;
+          const h = canvas.height;
+          ctx.clearRect(0, 0, w, h);
+          const levels = isPlaying ? sharedAudioEngine.getFrequencyLevels(32) : new Array(32).fill(0.04);
+          const gap = 3;
+          const barW = Math.max(3, (w - gap * (levels.length - 1)) / levels.length);
+          levels.forEach((lvl, i) => {
+            const barH = Math.max(4, Math.min(h - 2, lvl * h * 0.96));
+            const x = i * (barW + gap);
+            const y = h - barH;
+            ctx.fillStyle = lvl > 0.6 ? '#E5C158' : eqSettings.enabled ? 'rgba(212, 175, 55, 0.58)' : 'rgba(155, 151, 142, 0.35)';
+            ctx.beginPath();
+            ctx.roundRect(x, y, barW, barH, 2);
+            ctx.fill();
+          });
+        }
+      }
+      rafId = requestAnimationFrame(draw);
+    };
+    rafId = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafId);
+  }, [eqSettings.enabled, isPlaying]);
+
+  const presetKeys: EqPresetId[] = [
+    'flat',
+    'car',
+    'headphones',
+    'pop',
+    'rock',
+    'arabesk',
+    'vocal',
+    'classic',
+    'vocal_quran',
+    'tasavvuf',
+    'bass_boost',
+  ];
+
+  const customProfiles = eqSettings.customProfiles ?? [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-10">
+    <div className="max-w-5xl mx-auto space-y-6 pb-10">
       <button
         type="button"
         onClick={goBack}
@@ -310,31 +372,181 @@ export const AudioSettingsScreen: React.FC = () => {
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Ses Ayarları ve Ekolayzır</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Profesyonel 10-Bant Ekolayzır &amp; DSP</h1>
           <p className="text-sm text-[#9B978E] mt-1">
-            Canlı Web Audio DSP motoru · MP3, AAC, FLAC, OGG ve WAV destekli
+            Gerçek zamanlı Web Audio API DSP motoru · Preamp · Clipping önleyici sınırlayıcı · Canlı spektrum
           </p>
         </div>
 
-        <label className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#141418] border border-white/10 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={eqSettings.enabled}
-            disabled={!isEqSupported}
-            onChange={(e) => updateEqSettings({ enabled: e.target.checked })}
-            className="w-4 h-4 accent-[#D4AF37]"
-          />
-          <span className="text-sm font-medium text-[#F5F2EB]">Ekolayzır Aktif</span>
-        </label>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => applyEqPreset('flat')}
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-[#141418] hover:bg-[#1E1E24] border border-white/10 text-xs font-medium text-[#C8C5BC]"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-[#D4AF37]" />
+            Sıfırla
+          </button>
+
+          <label className="inline-flex items-center gap-2.5 h-10 px-4 rounded-xl bg-[#141418] border border-white/10 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={eqSettings.enabled}
+              disabled={!isEqSupported}
+              onChange={(e) => updateEqSettings({ enabled: e.target.checked })}
+              className="w-4 h-4 accent-[#D4AF37]"
+            />
+            <span className="text-sm font-medium text-[#F5F2EB]">Ekolayzır Aktif</span>
+          </label>
+        </div>
       </div>
 
       {!isEqSupported && (
         <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/30 text-sm text-amber-200">
-          Bu cihazda veya tarayıcıda donanım ses efektleri desteklenmiyor; oynatma güvenli şekilde ham ses çıkışıyla devam eder.
+          Bu tarayıcıda Web Audio DSP desteklenmiyor; oynatma kesintisiz olarak doğal donanım ses çıkışıyla devam eder.
         </div>
       )}
 
-      {/* Ready Audio Profiles (Car, Headphones, Quran Vocal, Tasavvuf...) */}
+      {/* Live Real-Time Spectrum Analyzer + 10-Band Parametric Sliders */}
+      <section className="p-5 sm:p-7 rounded-3xl bg-[#121216] border border-white/[0.07] space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium text-[#D4AF37]">Gerçek Zamanlı Spektrum Analizörü</p>
+            <p className="text-[11px] text-[#8C887F]">
+              {eqSettings.enabled
+                ? `Aktif profil: ${EQ_PRESETS[eqSettings.preset]?.label ?? 'Özel'} · Clipping Koruması Açık`
+                : 'Ekolayzır devre dışı — doğal düz ses çıkışı'}
+            </p>
+          </div>
+          <span className="text-[11px] font-mono text-[#8C887F]">31 Hz — 16 kHz</span>
+        </div>
+
+        <canvas
+          ref={spectrumRef}
+          width={640}
+          height={64}
+          className="w-full h-16 rounded-xl bg-[#09090B] border border-white/[0.06] px-2 py-1"
+          aria-hidden="true"
+        />
+
+        {/* 10-Band Graphic Equalizer */}
+        <div className="overflow-x-auto pb-2">
+          <div className="grid grid-cols-10 gap-2 min-w-[560px] justify-items-center">
+            {EQ_FREQUENCIES.map((freq, idx) => {
+              const val = eqSettings.bandsDb[idx] ?? 0;
+              return (
+                <div key={freq} className="flex flex-col items-center gap-2.5">
+                  <span className="text-[11px] font-mono tabular-nums text-[#D4AF37]">
+                    {val > 0 ? `+${val}` : val}
+                  </span>
+                  <input
+                    type="range"
+                    min={-12}
+                    max={12}
+                    step={0.5}
+                    value={val}
+                    disabled={!eqSettings.enabled || !isEqSupported}
+                    onChange={(e) => setEqBand(idx, Number(e.target.value))}
+                    aria-label={`${freq} Hz bandı`}
+                    className="eq-slider"
+                  />
+                  <span className="text-[11px] font-mono tabular-nums text-[#9B978E]">
+                    {EQ_FREQ_LABELS[idx]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Preamp, Bass Boost, Treble & Crossfade Controls */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-5 border-t border-white/[0.06]">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-[#F5F2EB]">Preamp (Ön Yükseltme)</span>
+              <span className="font-mono tabular-nums text-[#D4AF37]">
+                {eqSettings.preampDb > 0 ? `+${eqSettings.preampDb}` : eqSettings.preampDb} dB
+              </span>
+            </div>
+            <input
+              type="range"
+              min={-12}
+              max={12}
+              step={0.5}
+              value={eqSettings.preampDb}
+              disabled={!eqSettings.enabled || !isEqSupported}
+              onChange={(e) => updateEqSettings({ preampDb: Number(e.target.value), preset: 'custom' })}
+              className="gold-slider w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-[#F5F2EB]">Bas Güçlendirme (80 Hz)</span>
+              <span className="font-mono tabular-nums text-[#D4AF37]">+{eqSettings.bassBoostDb} dB</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={12}
+              step={0.5}
+              value={eqSettings.bassBoostDb}
+              disabled={!eqSettings.enabled || !isEqSupported}
+              onChange={(e) => updateEqSettings({ bassBoostDb: Number(e.target.value), preset: 'custom' })}
+              className="gold-slider w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-[#F5F2EB]">Tiz Parlaklığı (10 kHz)</span>
+              <span className="font-mono tabular-nums text-[#D4AF37]">
+                {eqSettings.trebleBoostDb > 0 ? `+${eqSettings.trebleBoostDb}` : eqSettings.trebleBoostDb} dB
+              </span>
+            </div>
+            <input
+              type="range"
+              min={-6}
+              max={12}
+              step={0.5}
+              value={eqSettings.trebleBoostDb}
+              disabled={!eqSettings.enabled || !isEqSupported}
+              onChange={(e) => updateEqSettings({ trebleBoostDb: Number(e.target.value), preset: 'custom' })}
+              className="gold-slider w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-[#F5F2EB]">Yumuşak Geçiş (Fade-in)</span>
+              <span className="font-mono tabular-nums text-[#D4AF37]">
+                {(eqSettings.crossfadeSec ?? 0) === 0 ? 'Kapalı' : `${eqSettings.crossfadeSec} sn`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={6}
+              step={1}
+              value={eqSettings.crossfadeSec ?? 0}
+              onChange={(e) => updateEqSettings({ crossfadeSec: Number(e.target.value) })}
+              className="gold-slider w-full"
+            />
+            <p className="text-[11px] text-[#7C7970]">Kur'an-ı Kerim tilavetinde geçiş efekti otomatik kapalı tutulur.</p>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-white/[0.06]">
+          <ToggleRow
+            label="Ses Seviyesi Dengeleme ve Distorsiyon Koruması"
+            description="Yüksek bas/preamp ayarlarında ses patlamasını (clipping) önler ve parçalar arası ses yüksekliğini dengeler."
+            checked={eqSettings.volumeLeveler}
+            onChange={(v) => updateEqSettings({ volumeLeveler: v })}
+          />
+        </div>
+      </section>
+
+      {/* Ready Audio Profiles */}
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-[#F5F2EB]">Hazır Ses Profilleri</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -364,79 +576,78 @@ export const AudioSettingsScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* 5-Band Parametric Equalizer + Bass & Treble */}
-      <section className="p-6 sm:p-8 rounded-3xl bg-[#121216] border border-white/[0.07] space-y-8">
-        <div className="grid grid-cols-5 gap-2 sm:gap-4 justify-items-center">
-          {EQ_FREQUENCIES.map((freq, idx) => {
-            const val = eqSettings.bandsDb[idx];
-            return (
-              <div key={freq} className="flex flex-col items-center gap-3">
-                <span className="text-xs font-mono tabular-nums text-[#D4AF37]">
-                  {val > 0 ? `+${val}` : val} dB
-                </span>
-                <input
-                  type="range"
-                  min={-12}
-                  max={12}
-                  step={1}
-                  value={val}
-                  disabled={!eqSettings.enabled || !isEqSupported}
-                  onChange={(e) => setEqBand(idx, Number(e.target.value))}
-                  aria-label={`${freq} Hz bandı`}
-                  className="eq-slider"
-                />
-                <span className="text-xs font-mono tabular-nums text-[#9B978E]">
-                  {freq >= 1000 ? `${freq / 1000} kHz` : `${freq} Hz`}
-                </span>
+      {/* Custom User Saved EQ Profiles */}
+      <section className="p-6 rounded-3xl bg-[#121216] border border-white/[0.07] space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-[#F5F2EB]">Özel Ekolayzır Profillerim</h2>
+          <p className="text-xs text-[#9B978E] mt-0.5">
+            Mevcut 10 bant, preamp ve bas/tiz ayarlarınızı kendi profil adınızla kaydedin.
+          </p>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!newProfileName.trim()) return;
+            saveCustomEqProfile(newProfileName);
+            setNewProfileName('');
+          }}
+          className="flex flex-col sm:flex-row gap-2.5"
+        >
+          <input
+            type="text"
+            value={newProfileName}
+            onChange={(e) => setNewProfileName(e.target.value)}
+            placeholder="Profil adı (ör. Gece Sürüşü, Bluetooth Hoparlör)"
+            maxLength={40}
+            className="flex-1 h-11 px-4 rounded-xl bg-[#09090B] border border-white/10 text-sm text-[#F5F2EB] placeholder:text-[#7C7970] focus:border-[#D4AF37] focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={!newProfileName.trim()}
+            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] disabled:opacity-40 text-[#09090B] text-xs font-semibold whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            Profili Kaydet
+          </button>
+        </form>
+
+        {customProfiles.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+            {customProfiles.map((prof) => (
+              <div
+                key={prof.id}
+                className="flex items-center justify-between gap-2 p-3.5 rounded-xl bg-[#17171D] border border-white/[0.07]"
+              >
+                <button
+                  type="button"
+                  onClick={() => applyCustomEqProfile(prof.id)}
+                  className="text-left min-w-0 flex-1"
+                >
+                  <p className="text-sm font-semibold text-[#F5F2EB] truncate hover:text-[#E5C158]">{prof.name}</p>
+                  <p className="text-[11px] font-mono text-[#8C887F]">
+                    Preamp {prof.preampDb > 0 ? `+${prof.preampDb}` : prof.preampDb} dB · Bas +{prof.bassBoostDb} dB
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteCustomEqProfile(prof.id)}
+                  aria-label={`${prof.name} profilini sil`}
+                  className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#8C887F] hover:text-red-400 hover:bg-white/[0.05]"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-white/[0.06]">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-[#F5F2EB]">Bas Güçlendirme (80 Hz)</span>
-              <span className="font-mono tabular-nums text-[#D4AF37]">+{eqSettings.bassBoostDb} dB</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={12}
-              step={1}
-              value={eqSettings.bassBoostDb}
-              disabled={!eqSettings.enabled || !isEqSupported}
-              onChange={(e) => updateEqSettings({ bassBoostDb: Number(e.target.value), preset: 'custom' })}
-              className="gold-slider w-full"
-            />
+            ))}
           </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-[#F5F2EB]">Tiz Parlaklığı (10 kHz)</span>
-              <span className="font-mono tabular-nums text-[#D4AF37]">
-                {eqSettings.trebleBoostDb > 0 ? `+${eqSettings.trebleBoostDb}` : eqSettings.trebleBoostDb} dB
-              </span>
-            </div>
-            <input
-              type="range"
-              min={-6}
-              max={12}
-              step={1}
-              value={eqSettings.trebleBoostDb}
-              disabled={!eqSettings.enabled || !isEqSupported}
-              onChange={(e) => updateEqSettings({ trebleBoostDb: Number(e.target.value), preset: 'custom' })}
-              className="gold-slider w-full"
-            />
-          </div>
-        </div>
+        )}
       </section>
     </div>
   );
 };
 
 // ============================================================
-// Screen 17: Genel Ayarlar
+// Screen 17: Genel Ayarlar (with JSON Backup & Restore)
 // ============================================================
 export const GeneralSettingsScreen: React.FC = () => {
   const {
@@ -446,14 +657,38 @@ export const GeneralSettingsScreen: React.FC = () => {
     eqSettings,
     navigate,
     setCarMode,
+    exportUserBackupJson,
+    importUserBackupJson,
+    showToast,
   } = useAutoMusic();
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
+
+  const handleExportBackup = () => {
+    const json = exportUserBackupJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `automusic-pro4-yedek-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Kullanıcı verileri yedek dosyası olarak indirildi.');
+  };
+
+  const handleImportBackup = async (file: File) => {
+    const text = await file.text();
+    const res = importUserBackupJson(text);
+    setBackupStatus(res.message);
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-10">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Ayarlar</h1>
         <p className="text-sm text-[#9B978E] mt-1">
-          Ses kalitesi, akıllı tek seferlik indirme, depolama, Araba Modu ve uygulama kurulumu
+          10 bant ekolayzır, akıllı tek seferlik indirme, depolama, Araç Modu, veri yedeği ve PWA kurulumu
         </p>
       </div>
 
@@ -465,9 +700,9 @@ export const GeneralSettingsScreen: React.FC = () => {
           className="p-5 rounded-2xl bg-[#121216] hover:bg-[#19181F] border border-white/[0.07] text-left space-y-2 transition-colors"
         >
           <SlidersHorizontal className="w-5 h-5 text-[#D4AF37]" />
-          <p className="text-base font-semibold text-[#F5F2EB]">Ses Ayarları ve Ekolayzır</p>
+          <p className="text-base font-semibold text-[#F5F2EB]">10-Bant Ekolayzır ve Ses Ayarları</p>
           <p className="text-xs text-[#9B978E]">
-            Aktif profil: {EQ_PRESETS[eqSettings.preset].label} · Bas &amp; Tiz · Araba ve Kulaklık profilleri
+            Aktif profil: {EQ_PRESETS[eqSettings.preset]?.label ?? 'Özel'} · Preamp, Bas/Tiz ve Özel Profiller
           </p>
         </button>
 
@@ -489,16 +724,58 @@ export const GeneralSettingsScreen: React.FC = () => {
           className="p-5 rounded-2xl bg-[#121216] hover:bg-[#19181F] border border-white/[0.07] text-left space-y-2 transition-colors"
         >
           <Car className="w-5 h-5 text-[#D4AF37]" />
-          <p className="text-base font-semibold text-[#F5F2EB]">Android Auto Araba Modunu Aç</p>
+          <p className="text-base font-semibold text-[#F5F2EB]">Araç Modunu Aç</p>
           <p className="text-xs text-[#9B978E]">
-            Sürüş güvenliğine uygun büyük dokunmatik şablon ve direksiyon medya kumandaları
+            Sürüşe uygun büyük dokunmatik arayüz, gece/gündüz teması ve Bluetooth medya tuşları
           </p>
         </button>
 
         <PWAInstallButton variant="card" />
       </div>
 
-      {/* Transparent Catalog Provider Status (Rule 12: No hardcoded API keys, clear status) */}
+      {/* Backup & Restore User Data */}
+      <section className="p-6 rounded-3xl bg-[#121216] border border-white/[0.07] space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-[#F5F2EB]">Veri Yedekleme ve Geri Yükleme</h2>
+            <p className="text-xs text-[#9B978E] mt-0.5">
+              Favorileriniz, çalma listeleriniz, özel kategorileriniz ve ekolayzır profilleriniz yerel cihazınızda saklanır.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold"
+            >
+              <Save className="w-4 h-4" />
+              Yedeği İndir (.json)
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#18181F] hover:bg-[#23232C] border border-white/10 text-xs font-medium text-[#F5F2EB]"
+            >
+              <Upload className="w-4 h-4 text-[#D4AF37]" />
+              Yedekten Yükle
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleImportBackup(file);
+                e.target.value = '';
+              }}
+            />
+          </div>
+        </div>
+        {backupStatus && <p className="text-xs text-[#E5C158]">{backupStatus}</p>}
+      </section>
+
+      {/* Transparent Catalog Provider Status */}
       <section className="p-6 rounded-3xl bg-[#121216] border border-white/[0.07] space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-[#D4AF37]" />
@@ -507,8 +784,8 @@ export const GeneralSettingsScreen: React.FC = () => {
 
         <div className="divide-y divide-white/[0.06] text-sm">
           <ProviderRow
-            name="AutoMusic Pro Kategori & Liste Veritabanı (SQLite)"
-            detail="17 kategoriye özel hazır Türkçe ve Arapça çalma listeleri"
+            name="AutoMusic Pro Kategori & Seçki Veritabanı"
+            detail="18 kategoriye özel doğrulanmış Türkçe, Karadeniz, Fantezi ve Arapça seçkiler"
             connected={providerStatus.databaseConnected}
           />
           <ProviderRow
@@ -517,24 +794,34 @@ export const GeneralSettingsScreen: React.FC = () => {
             connected={providerStatus.quranApiConnected}
           />
           <ProviderRow
-            name="Internet Archive Açık Lisanslı Ses Arşivi"
-            detail="Creative Commons ve Kamu Malı açık ses kayıtları"
+            name="Internet Archive Açık Ses Arşivi"
+            detail="Doğrulanmış tam uzunlukta açık arşiv kayıtları"
             connected={providerStatus.internetArchiveConnected}
           />
           <ProviderRow
+            name="Audius Açık Müzik Ağı"
+            detail="Ücretsiz, aboneliksiz tam uzunlukta bağımsız müzik akışı"
+            connected={Boolean(providerStatus.audiusConnected)}
+          />
+          <ProviderRow
+            name="Wikimedia Commons & MusicBrainz"
+            detail="Açık ses kayıtları ve gerçek sanatçı/albüm/parça sıralaması veritabanı"
+            connected={Boolean(providerStatus.wikimediaConnected)}
+          />
+          <ProviderRow
             name="Jamendo Lisanslı Müzik Kataloğu"
-            detail="Sunucu ortam değişkeni (JAMENDO_CLIENT_ID) ile bağlanır"
+            detail="Sunucu ortam değişkeni (JAMENDO_CLIENT_ID) ile etkinleştirilir"
             connected={providerStatus.jamendoConfigured}
           />
           <ProviderRow
             name="Yerel Cihaz Ses Dosyaları (MP3 / AAC / FLAC)"
-            detail="Kullanıcının kendi eklediği dosyalar uygulama arşivinde saklanır"
+            detail="Kullanıcının kendi eklediği dosyalar çevrimdışı arşivde saklanır"
             connected={providerStatus.localArchiveReady}
           />
         </div>
 
         <p className="text-xs text-[#8C887F] leading-relaxed pt-2">
-          DRM korumalı servislerden (Spotify, YouTube vb.) izinsiz indirme veya akış dönüştürme uygulanmaz. API anahtarları kaynak koda sabit yazılmaz.
+          DRM korumalı veya ücretli abonelik gerektiren servislerden izinsiz içerik çekilmez. Tüm ses bağlantıları yalnızca izinli açık kaynaklardan güvenli sunucu aktarımıyla sunulur.
         </p>
       </section>
     </div>
@@ -574,7 +861,7 @@ const ProviderRow: React.FC<{ name: string; detail: string; connected: boolean }
     </div>
     <span className={`text-xs font-medium shrink-0 inline-flex items-center gap-1.5 ${connected ? 'text-[#D4AF37]' : 'text-[#8C887F]'}`}>
       {connected && <CheckCircle2 className="w-3.5 h-3.5" />}
-      {connected ? 'Bağlı' : 'Bağlanmadı'}
+      {connected ? 'Bağlı' : 'Hazır (Anahtar Bekliyor)'}
     </span>
   </div>
 );

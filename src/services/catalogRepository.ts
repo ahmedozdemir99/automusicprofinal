@@ -20,6 +20,82 @@ export function normalizeSearchText(input: string): string {
     .trim();
 }
 
+// Fast Levenshtein edit distance for typo-tolerant Turkish search
+function editDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const prev = new Array<number>(b.length + 1);
+  const curr = new Array<number>(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+
+/**
+ * Returns a match score (0 = no match, higher = better match) supporting exact substrings,
+ * Turkish character folding, and 1-2 character typo tolerance per word.
+ */
+export function fuzzyMatchScore(rawQuery: string, rawTarget: string): number {
+  const q = normalizeSearchText(rawQuery);
+  const t = normalizeSearchText(rawTarget);
+  if (!q || !t) return 0;
+  if (t === q) return 100;
+  if (t.startsWith(q)) return 85;
+  if (t.includes(q)) return 70;
+
+  const qWords = q.split(/\s+/).filter((w) => w.length >= 2);
+  const tWords = t.split(/[\s—\-.,/()]+/).filter((w) => w.length >= 2);
+  if (qWords.length === 0 || tWords.length === 0) return 0;
+
+  let matchedWords = 0;
+  let totalScore = 0;
+  for (const qw of qWords) {
+    let bestWordScore = 0;
+    for (const tw of tWords) {
+      if (tw.includes(qw)) {
+        bestWordScore = Math.max(bestWordScore, 55);
+      } else if (qw.length >= 4) {
+        const dist = editDistance(qw, tw);
+        const maxDist = qw.length >= 7 ? 2 : 1;
+        if (dist <= maxDist) {
+          bestWordScore = Math.max(bestWordScore, dist === 1 ? 42 : 28);
+        }
+      }
+    }
+    if (bestWordScore > 0) {
+      matchedWords++;
+      totalScore += bestWordScore;
+    }
+  }
+  return matchedWords === qWords.length ? totalScore / qWords.length : 0;
+}
+
+export interface VerifiedAlbum {
+  id: string;
+  title: string;
+  year: string;
+  artist: string;
+  coverUrl: string;
+  sourceUrl: string;
+}
+
+export interface VerifiedAlbumTrack {
+  position: number;
+  disc: number;
+  title: string;
+  durationSec: number;
+  recordingId?: string;
+}
+
 export class QuranCatalogRepository {
   getReciters(): Reciter[] {
     return RECITERS;
@@ -109,16 +185,22 @@ export class DatabaseCatalogRepository {
         dbNotice = data.notice ?? '';
       }
     } catch {
-      // D1 is optional; try the public catalog below.
+      // Fallback to open-music discovery below
     }
-    // A successful D1 connection with zero rows must not prevent catalog discovery.
+
     if (dbTracks.length > 0 && !forceRefresh) {
       return { playlists: dbPlaylists, tracks: dbTracks, notice: dbNotice };
     }
-    const category = (await import('../data/categories')).DEFAULT_CATEGORIES.find(c => c.id === categoryId);
+
+    const category = (await import('../data/categories')).DEFAULT_CATEGORIES.find((c) => c.id === categoryId);
     if (!category || category.isQuran) {
-      return { playlists: dbPlaylists, tracks: dbTracks, notice: dbNotice || 'Bu kategori için çevrimiçi katalog tanımlı değil.' };
+      return {
+        playlists: dbPlaylists,
+        tracks: dbTracks,
+        notice: dbNotice || 'Bu kategori için çevrimiçi katalog tanımlı değil.',
+      };
     }
+
     try {
       const params = new URLSearchParams({
         categoryId: category.id,
@@ -130,9 +212,9 @@ export class DatabaseCatalogRepository {
       const res = await fetch(`/api/catalog/open-music?${params.toString()}`);
       if (!res.ok) throw new Error('catalog unavailable');
       const data = (await res.json()) as { tracks?: MediaItem[]; notice?: string };
-      const discovered = (data.tracks ?? []).filter(t => t.categoryId === categoryId && !!t.streamUrl);
+      const discovered = (data.tracks ?? []).filter((t) => !!t.streamUrl);
       const seen = new Set<string>();
-      const tracks = [...dbTracks, ...discovered].filter(t => {
+      const tracks = [...dbTracks, ...discovered].filter((t) => {
         if (!t.contentId || seen.has(t.contentId)) return false;
         seen.add(t.contentId);
         return true;
@@ -140,11 +222,16 @@ export class DatabaseCatalogRepository {
       return {
         playlists: dbPlaylists,
         tracks,
-        notice: tracks.length ? 'Lisansı doğrulanmış açık katalog kayıtları listeleniyor.' :
-          (data.notice || dbNotice || 'Bu kategoride doğrulanmış açık lisanslı kayıt bulunamadı.'),
+        notice: tracks.length
+          ? undefined
+          : data.notice || dbNotice || 'Bu kategoride doğrulanmış açık lisanslı kayıt bulunamadı.',
       };
     } catch {
-      return { playlists: dbPlaylists, tracks: dbTracks, notice: dbNotice || 'Müzik kataloğuna şu anda ulaşılamıyor.' };
+      return {
+        playlists: dbPlaylists,
+        tracks: dbTracks,
+        notice: dbNotice || 'Müzik kataloğuna şu anda ulaşılamıyor.',
+      };
     }
   }
 
@@ -159,7 +246,11 @@ export class DatabaseCatalogRepository {
     }
   }
 
-  async searchTracks(query: string, category?: MusicCategory): Promise<{ tracks: MediaItem[]; notice?: string }> {
+  async searchTracks(
+    query: string,
+    category?: MusicCategory,
+    offset = 0
+  ): Promise<{ tracks: MediaItem[]; notice?: string; hasMore?: boolean }> {
     const params = new URLSearchParams({
       q: query,
       categoryId: category?.id ?? 'turkuler',
@@ -167,13 +258,51 @@ export class DatabaseCatalogRepository {
       genre: category?.genre ?? 'Müzik',
       motif: category?.motif ?? 'turkuler',
       searchMode: '1',
+      offset: String(offset),
     });
     const res = await fetch(`/api/catalog/open-music?${params.toString()}`);
     if (!res.ok) {
-      return { tracks: [], notice: 'Çevrimiçi katalog araması tamamlanamadı.' };
+      return { tracks: [], hasMore: false, notice: 'Çevrimiçi katalog araması tamamlanamadı.' };
     }
-    const data = (await res.json()) as { tracks: MediaItem[]; notice?: string };
-    return { tracks: data.tracks ?? [], notice: data.notice };
+    const data = (await res.json()) as { tracks?: MediaItem[]; notice?: string; hasMore?: boolean };
+    return { tracks: data.tracks ?? [], notice: data.notice, hasMore: Boolean(data.hasMore) };
+  }
+
+  async fetchVerifiedArtistsAndAlbums(
+    categoryId: string,
+    artist?: string
+  ): Promise<{ artists: string[]; albums: VerifiedAlbum[]; notice?: string }> {
+    const params = new URLSearchParams({ categoryId });
+    if (artist) params.set('artist', artist);
+    const res = await fetch(`/api/catalog/verified?${params.toString()}`);
+    if (!res.ok) {
+      return { artists: [], albums: [], notice: 'Sanatçı ve albüm bilgilerine şu an ulaşılamıyor.' };
+    }
+    const data = (await res.json()) as { artists?: string[]; albums?: VerifiedAlbum[]; notice?: string };
+    return {
+      artists: data.artists ?? [],
+      albums: data.albums ?? [],
+      notice: data.notice,
+    };
+  }
+
+  async fetchAlbumTracklist(
+    albumId: string
+  ): Promise<{ tracks: VerifiedAlbumTrack[]; releaseDate?: string; notice?: string }> {
+    const res = await fetch(`/api/catalog/verified?albumId=${encodeURIComponent(albumId)}`);
+    if (!res.ok) {
+      return { tracks: [], notice: 'Albüm parça listesi şu anda alınamıyor.' };
+    }
+    const data = (await res.json()) as {
+      tracks?: VerifiedAlbumTrack[];
+      releaseDate?: string;
+      notice?: string;
+    };
+    return {
+      tracks: data.tracks ?? [],
+      releaseDate: data.releaseDate,
+      notice: data.notice,
+    };
   }
 }
 
@@ -187,6 +316,8 @@ export async function fetchCatalogProviderStatus(): Promise<CatalogProviderStatu
       databaseConnected: false,
       quranApiConnected: true,
       internetArchiveConnected: false,
+      audiusConnected: false,
+      wikimediaConnected: false,
       jamendoConfigured: false,
       localArchiveReady: true,
     };

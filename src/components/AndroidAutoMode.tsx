@@ -5,14 +5,19 @@ import {
   Disc3,
   Heart,
   ListMusic,
+  Moon,
   Pause,
   Play,
   Repeat,
   Repeat1,
+  RotateCcw,
+  RotateCw,
   Shuffle,
   SkipBack,
   SkipForward,
+  SlidersHorizontal,
   Smartphone,
+  Sun,
   Users,
 } from 'lucide-react';
 import { useAutoMusic } from '../context/AutoMusicContext';
@@ -39,17 +44,21 @@ export const AndroidAutoMode: React.FC = () => {
     duration,
     shuffle,
     repeatMode,
+    eqSettings,
+    applyEqPreset,
     playTrack,
     playQueue,
     togglePlay,
     nextTrack,
     prevTrack,
+    seekBy,
     toggleShuffle,
     cycleRepeatMode,
   } = useAutoMusic();
 
   const [section, setSection] = useState<AutoSection>('categories');
   const [statusNote, setStatusNote] = useState<string | null>(null);
+  const [dayMode, setDayMode] = useState(false);
 
   const selectedReciter = useMemo(
     () => RECITERS.find((r) => r.id === selectedReciterId) ?? RECITERS[0],
@@ -81,33 +90,71 @@ export const AndroidAutoMode: React.FC = () => {
     }
   };
 
+  const isCarEqActive = eqSettings.enabled && eqSettings.preset === 'car';
+
+  const bgRoot = dayMode ? 'bg-[#F4EFE4] text-[#141310]' : 'bg-[#050507] text-[#F5F2EB]';
+  const bgHeader = dayMode ? 'bg-[#EAE2D0] border-[#141310]/15' : 'bg-[#0B0B0F] border-white/10';
+  const bgDeck = dayMode ? 'bg-[#EFE8D8] border-[#141310]/15' : 'bg-[#0D0D12] border-white/10';
+  const cardSurface = dayMode
+    ? 'bg-white hover:bg-[#FAF6EC] border-[#141310]/12 text-[#141310]'
+    : 'bg-[#131318] hover:bg-[#1D1C22] border-white/[0.08] text-[#F5F2EB]';
+  const mutedText = dayMode ? 'text-[#5C5649]' : 'text-[#9B978E]';
+  const btnSecondary = dayMode
+    ? 'bg-[#E2D8C3] hover:bg-[#D7CAAF] text-[#141310] border-[#141310]/15'
+    : 'bg-[#191922] hover:bg-[#242430] text-[#F5F2EB] border-white/10';
+
   return (
-    <div className="fixed inset-0 z-50 bg-[#050507] text-[#F5F2EB] flex flex-col">
-      {/* Android Auto Top Car Bar (Distraction-Free Driving Template) */}
-      <header className="h-16 px-5 border-b border-white/10 bg-[#0B0B0F] flex items-center justify-between gap-4 shrink-0">
+    <div className={`fixed inset-0 z-50 flex flex-col transition-colors ${bgRoot}`}>
+      {/* Car Mode Top Bar (Honest Distraction-Free Driving Interface) */}
+      <header className={`h-16 px-4 sm:px-5 border-b flex items-center justify-between gap-3 shrink-0 ${bgHeader}`}>
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-lg font-bold tracking-tight text-[#D4AF37] whitespace-nowrap">
-            AutoMusic Pro
+          <span className={`text-lg font-bold tracking-tight whitespace-nowrap ${dayMode ? 'text-[#8C6D14]' : 'text-[#D4AF37]'}`}>
+            AutoMusic Pro 4
           </span>
-          <span className="text-xs text-[#9B978E] whitespace-nowrap">
-            Android Auto Sürüş Modu · Direksiyon Kumandası Hazır
+          <span className={`hidden sm:inline text-xs whitespace-nowrap ${mutedText}`}>
+            Araç Modu · Bluetooth Medya Kumandası
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setCarMode(false)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A1A21] hover:bg-[#24242D] text-sm font-medium text-[#F5F2EB] border border-white/10 whitespace-nowrap"
-        >
-          <Smartphone className="w-4 h-4 text-[#D4AF37]" />
-          Telefon Modu
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => applyEqPreset(isCarEqActive ? 'flat' : 'car')}
+            className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap ${
+              isCarEqActive
+                ? 'bg-[#D4AF37] text-[#09090B] border-[#D4AF37]'
+                : btnSecondary
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Araç EQ</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDayMode((d) => !d)}
+            aria-label={dayMode ? 'Gece moduna geç' : 'Gündüz moduna geç'}
+            className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap ${btnSecondary}`}
+          >
+            {dayMode ? <Moon className="w-4 h-4 shrink-0" /> : <Sun className="w-4 h-4 text-[#D4AF37] shrink-0" />}
+            <span className="hidden sm:inline">{dayMode ? 'Gece' : 'Gündüz'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCarMode(false)}
+            className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl text-xs sm:text-sm font-semibold border whitespace-nowrap ${btnSecondary}`}
+          >
+            <Smartphone className={`w-4 h-4 ${dayMode ? 'text-[#8C6D14]' : 'text-[#D4AF37]'}`} />
+            Normal Mod
+          </button>
+        </div>
       </header>
 
-      {/* Main Car Head Unit Layout: Browse Rail + Content + Now Playing Deck */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12">
+      {/* Main Car Layout: Browse Rail + Content + Oversized Playback Deck (supports portrait & landscape) */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12">
         {/* Left Navigation Rail (Large Touch Targets) */}
-        <aside className="lg:col-span-3 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0B0B0F] p-3 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto">
+        <aside className={`md:col-span-3 border-b md:border-b-0 md:border-r p-3 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto ${bgHeader}`}>
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -119,7 +166,9 @@ export const AndroidAutoMode: React.FC = () => {
               className={`min-h-[56px] px-4 rounded-2xl flex items-center gap-3 text-left text-base font-medium whitespace-nowrap transition-colors shrink-0 ${
                 section === item.id
                   ? 'bg-[#D4AF37] text-[#09090B]'
-                  : 'bg-[#14141A] text-[#E5E2D9] hover:bg-[#1D1D25]'
+                  : dayMode
+                    ? 'bg-white text-[#141310] hover:bg-[#FAF6EC] border border-[#141310]/10'
+                    : 'bg-[#14141A] text-[#E5E2D9] hover:bg-[#1D1D25]'
               }`}
             >
               {item.icon}
@@ -128,8 +177,8 @@ export const AndroidAutoMode: React.FC = () => {
           ))}
         </aside>
 
-        {/* Center Browse Grid (Official Android Auto Media Grid/List Template) */}
-        <main className="lg:col-span-5 p-5 overflow-y-auto space-y-4">
+        {/* Center Browse Grid */}
+        <main className="md:col-span-5 p-4 sm:p-5 overflow-y-auto space-y-4">
           {statusNote && (
             <div className="p-4 rounded-2xl bg-[#171612] border border-[#D4AF37]/30 text-sm text-[#E5C158]">
               {statusNote}
@@ -143,12 +192,12 @@ export const AndroidAutoMode: React.FC = () => {
                   key={cat.id}
                   type="button"
                   onClick={() => void handlePlayCategory(cat.id, cat.name)}
-                  className="min-h-[72px] p-4 rounded-2xl bg-[#131318] hover:bg-[#1D1C22] border border-white/[0.08] text-left flex items-center gap-3.5 transition-colors"
+                  className={`min-h-[72px] p-4 rounded-2xl border text-left flex items-center gap-3.5 transition-colors ${cardSurface}`}
                 >
                   <ArtworkCover motif={cat.motif} size="sm" />
                   <div className="min-w-0">
-                    <p className="text-base font-semibold text-[#F5F2EB] truncate">{cat.name}</p>
-                    <p className="text-xs text-[#9B978E] truncate">{cat.language}</p>
+                    <p className="text-base font-semibold truncate">{cat.name}</p>
+                    <p className={`text-xs truncate ${mutedText}`}>{cat.language}</p>
                   </div>
                 </button>
               ))}
@@ -157,7 +206,7 @@ export const AndroidAutoMode: React.FC = () => {
 
           {section === 'artists' && (
             <div className="space-y-3">
-              <p className="text-xs text-[#9B978E]">Kariler ve Katalog Sanatçıları</p>
+              <p className={`text-xs ${mutedText}`}>Kariler ve Katalog Sanatçıları</p>
               {RECITERS.map((rec) => (
                 <button
                   key={rec.id}
@@ -169,11 +218,11 @@ export const AndroidAutoMode: React.FC = () => {
                       false
                     );
                   }}
-                  className="w-full min-h-[68px] px-4 py-3 rounded-2xl bg-[#131318] hover:bg-[#1D1C22] border border-white/[0.08] flex items-center justify-between text-left"
+                  className={`w-full min-h-[68px] px-4 py-3 rounded-2xl border flex items-center justify-between text-left ${cardSurface}`}
                 >
                   <div>
-                    <p className="text-base font-semibold text-[#F5F2EB]">{rec.nameTr}</p>
-                    <p className="text-xs text-[#9B978E]">Kur'an Karisi · {rec.style}</p>
+                    <p className="text-base font-semibold">{rec.nameTr}</p>
+                    <p className={`text-xs ${mutedText}`}>Kur'an Karisi · {rec.style}</p>
                   </div>
                   <Play className="w-5 h-5 text-[#D4AF37] fill-[#D4AF37]" />
                 </button>
@@ -186,17 +235,17 @@ export const AndroidAutoMode: React.FC = () => {
                   else acc.push({ name: t.artistName, tracks: [t] });
                   return acc;
                 }, [])
-                .slice(0, 12)
+                .slice(0, 14)
                 .map((art) => (
                   <button
                     key={art.name}
                     type="button"
                     onClick={() => void playQueue(art.tracks, false)}
-                    className="w-full min-h-[68px] px-4 py-3 rounded-2xl bg-[#131318] hover:bg-[#1D1C22] border border-white/[0.08] flex items-center justify-between text-left"
+                    className={`w-full min-h-[68px] px-4 py-3 rounded-2xl border flex items-center justify-between text-left ${cardSurface}`}
                   >
                     <div>
-                      <p className="text-base font-semibold text-[#F5F2EB]">{art.name}</p>
-                      <p className="text-xs text-[#9B978E]">{art.tracks.length} kayıt</p>
+                      <p className="text-base font-semibold">{art.name}</p>
+                      <p className={`text-xs ${mutedText}`}>{art.tracks.length} kayıt</p>
                     </div>
                     <Play className="w-5 h-5 text-[#D4AF37] fill-[#D4AF37]" />
                   </button>
@@ -207,7 +256,7 @@ export const AndroidAutoMode: React.FC = () => {
           {section === 'favorites' && (
             <div className="space-y-3">
               {favoriteTracks.length === 0 ? (
-                <p className="text-sm text-[#9B978E] p-4">Henüz favori parça eklenmedi.</p>
+                <p className={`text-sm p-4 ${mutedText}`}>Henüz favori parça eklenmedi.</p>
               ) : (
                 <>
                   <div className="flex gap-3">
@@ -221,7 +270,7 @@ export const AndroidAutoMode: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => void playQueue(favoriteTracks, true)}
-                      className="flex-1 min-h-[56px] rounded-2xl bg-[#191920] text-[#F5F2EB] font-semibold text-sm border border-white/10"
+                      className={`flex-1 min-h-[56px] rounded-2xl font-semibold text-sm border ${btnSecondary}`}
                     >
                       Karışık Çal
                     </button>
@@ -231,10 +280,10 @@ export const AndroidAutoMode: React.FC = () => {
                       key={t.contentId}
                       type="button"
                       onClick={() => void playTrack(t, favoriteTracks)}
-                      className="w-full min-h-[64px] px-4 py-3 rounded-2xl bg-[#131318] hover:bg-[#1D1C22] border border-white/[0.08] text-left"
+                      className={`w-full min-h-[64px] px-4 py-3 rounded-2xl border text-left ${cardSurface}`}
                     >
                       <p className="text-base font-semibold truncate">{t.title}</p>
-                      <p className="text-xs text-[#9B978E] truncate">{t.artistName}</p>
+                      <p className={`text-xs truncate ${mutedText}`}>{t.artistName}</p>
                     </button>
                   ))}
                 </>
@@ -249,11 +298,11 @@ export const AndroidAutoMode: React.FC = () => {
                   key={pl.id}
                   type="button"
                   onClick={() => void playQueue(pl.items, false)}
-                  className="w-full min-h-[72px] px-4 py-3 rounded-2xl bg-[#131318] hover:bg-[#1D1C22] border border-white/[0.08] flex items-center justify-between text-left"
+                  className={`w-full min-h-[72px] px-4 py-3 rounded-2xl border flex items-center justify-between text-left ${cardSurface}`}
                 >
                   <div>
                     <p className="text-base font-semibold">{pl.name}</p>
-                    <p className="text-xs text-[#9B978E]">{pl.items.length} kayıt</p>
+                    <p className={`text-xs ${mutedText}`}>{pl.items.length} kayıt</p>
                   </div>
                   <Play className="w-5 h-5 text-[#D4AF37] fill-[#D4AF37]" />
                 </button>
@@ -274,18 +323,18 @@ export const AndroidAutoMode: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => void playQueue(quranItems, true)}
-                  className="flex-1 min-h-[56px] rounded-2xl bg-[#191920] text-[#F5F2EB] font-semibold text-sm border border-white/10"
+                  className={`flex-1 min-h-[56px] rounded-2xl font-semibold text-sm border ${btnSecondary}`}
                 >
                   Karışık Dinle
                 </button>
               </div>
-              <p className="text-xs text-[#D4AF37]">Aktif Kari: {selectedReciter.nameTr}</p>
+              <p className="text-xs font-medium text-[#D4AF37]">Aktif Kari: {selectedReciter.nameTr}</p>
               {quranItems.slice(0, 36).map((item) => (
                 <button
                   key={item.contentId}
                   type="button"
                   onClick={() => void playTrack(item, quranItems)}
-                  className="w-full min-h-[64px] px-4 py-3 rounded-2xl bg-[#131318] hover:bg-[#1D1C22] border border-white/[0.08] flex items-center justify-between text-left"
+                  className={`w-full min-h-[64px] px-4 py-3 rounded-2xl border flex items-center justify-between text-left ${cardSurface}`}
                 >
                   <span className="text-base font-semibold">{item.title}</span>
                   <span className="font-arabic text-lg text-[#D4AF37]" dir="rtl">
@@ -299,17 +348,17 @@ export const AndroidAutoMode: React.FC = () => {
           {section === 'recent' && (
             <div className="space-y-3">
               {recentlyPlayed.length === 0 ? (
-                <p className="text-sm text-[#9B978E] p-4">Son dinlenen kayıt henüz yok.</p>
+                <p className={`text-sm p-4 ${mutedText}`}>Son dinlenen kayıt henüz yok.</p>
               ) : (
                 recentlyPlayed.map((t) => (
                   <button
                     key={t.contentId}
                     type="button"
                     onClick={() => void playTrack(t, recentlyPlayed)}
-                    className="w-full min-h-[64px] px-4 py-3 rounded-2xl bg-[#131318] hover:bg-[#1D1C22] border border-white/[0.08] text-left"
+                    className={`w-full min-h-[64px] px-4 py-3 rounded-2xl border text-left ${cardSurface}`}
                   >
                     <p className="text-base font-semibold truncate">{t.title}</p>
-                    <p className="text-xs text-[#9B978E] truncate">{t.artistName}</p>
+                    <p className={`text-xs truncate ${mutedText}`}>{t.artistName}</p>
                   </button>
                 ))
               )}
@@ -318,30 +367,42 @@ export const AndroidAutoMode: React.FC = () => {
         </main>
 
         {/* Right Side: Oversized Driving-Safe Media Playback Deck */}
-        <section className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0D0D12] p-6 flex flex-col items-center justify-center text-center gap-5">
+        <section className={`md:col-span-4 border-t md:border-t-0 md:border-l p-5 sm:p-6 flex flex-col items-center justify-center text-center gap-4 ${bgDeck}`}>
           {currentTrack ? (
             <>
               <ArtworkCover
                 motif={currentTrack.motif}
+                imageUrl={currentTrack.coverUrl}
                 arabicTitle={currentTrack.arabicTitle}
                 size="lg"
               />
               <div className="space-y-1 max-w-xs">
-                <h2 className="text-xl font-bold text-[#F5F2EB] truncate">{currentTrack.title}</h2>
-                <p className="text-sm text-[#D4AF37] truncate">{currentTrack.artistName}</p>
-                <p className="text-xs font-mono tabular-nums text-[#8C887F]">
+                <h2 className="text-xl font-bold truncate">{currentTrack.title}</h2>
+                <p className={`text-sm font-medium truncate ${dayMode ? 'text-[#8C6D14]' : 'text-[#D4AF37]'}`}>
+                  {currentTrack.artistName}
+                </p>
+                <p className={`text-xs font-mono tabular-nums ${mutedText}`}>
                   {formatDuration(currentTime)} / {formatDuration(duration)}
                 </p>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => seekBy(-15)}
+                  aria-label="15 saniye geri"
+                  className={`w-12 h-12 rounded-2xl border flex flex-col items-center justify-center ${btnSecondary}`}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span className="text-[10px] font-mono leading-none mt-0.5">15</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => void prevTrack()}
                   aria-label="Önceki parça"
-                  className="w-16 h-16 rounded-2xl bg-[#191922] hover:bg-[#242430] flex items-center justify-center text-[#F5F2EB]"
+                  className={`w-14 h-14 rounded-2xl border flex items-center justify-center ${btnSecondary}`}
                 >
-                  <SkipBack className="w-7 h-7 fill-current" />
+                  <SkipBack className="w-6 h-6 fill-current" />
                 </button>
                 <button
                   type="button"
@@ -359,9 +420,18 @@ export const AndroidAutoMode: React.FC = () => {
                   type="button"
                   onClick={() => void nextTrack()}
                   aria-label="Sonraki parça"
-                  className="w-16 h-16 rounded-2xl bg-[#191922] hover:bg-[#242430] flex items-center justify-center text-[#F5F2EB]"
+                  className={`w-14 h-14 rounded-2xl border flex items-center justify-center ${btnSecondary}`}
                 >
-                  <SkipForward className="w-7 h-7 fill-current" />
+                  <SkipForward className="w-6 h-6 fill-current" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => seekBy(15)}
+                  aria-label="15 saniye ileri"
+                  className={`w-12 h-12 rounded-2xl border flex flex-col items-center justify-center ${btnSecondary}`}
+                >
+                  <RotateCw className="w-4 h-4" />
+                  <span className="text-[10px] font-mono leading-none mt-0.5">15</span>
                 </button>
               </div>
 
@@ -369,8 +439,8 @@ export const AndroidAutoMode: React.FC = () => {
                 <button
                   type="button"
                   onClick={toggleShuffle}
-                  className={`min-h-[48px] px-4 rounded-xl text-sm font-medium inline-flex items-center gap-2 ${
-                    shuffle ? 'bg-[#D4AF37] text-[#09090B]' : 'bg-[#191922] text-[#C8C5BC]'
+                  className={`min-h-[48px] px-4 rounded-xl text-sm font-medium inline-flex items-center gap-2 border ${
+                    shuffle ? 'bg-[#D4AF37] text-[#09090B] border-[#D4AF37]' : btnSecondary
                   }`}
                 >
                   <Shuffle className="w-4 h-4" />
@@ -379,8 +449,8 @@ export const AndroidAutoMode: React.FC = () => {
                 <button
                   type="button"
                   onClick={cycleRepeatMode}
-                  className={`min-h-[48px] px-4 rounded-xl text-sm font-medium inline-flex items-center gap-2 ${
-                    repeatMode !== 'off' ? 'bg-[#D4AF37] text-[#09090B]' : 'bg-[#191922] text-[#C8C5BC]'
+                  className={`min-h-[48px] px-4 rounded-xl text-sm font-medium inline-flex items-center gap-2 border ${
+                    repeatMode !== 'off' ? 'bg-[#D4AF37] text-[#09090B] border-[#D4AF37]' : btnSecondary
                   }`}
                 >
                   {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
@@ -389,8 +459,8 @@ export const AndroidAutoMode: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="space-y-2 text-[#8C887F]">
-              <p className="text-base font-medium text-[#F5F2EB]">Oynatıcı Hazır</p>
+            <div className={`space-y-2 ${mutedText}`}>
+              <p className="text-base font-medium">Oynatıcı Hazır</p>
               <p className="text-sm">Sol menüden bir kategori, liste veya sure seçin.</p>
             </div>
           )}

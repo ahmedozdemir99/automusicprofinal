@@ -4,6 +4,7 @@ import {
   Heart,
   Loader2,
   Maximize2,
+  Moon,
   Pause,
   Play,
   Repeat,
@@ -30,6 +31,8 @@ export const PlayerBar: React.FC = () => {
     volume,
     shuffle,
     repeatMode,
+    sleepTimerMode,
+    sleepTimerRemainingSec,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -67,6 +70,7 @@ export const PlayerBar: React.FC = () => {
           >
             <ArtworkCover
               motif={currentTrack.motif}
+              imageUrl={currentTrack.coverUrl}
               arabicTitle={currentTrack.arabicTitle}
               size="sm"
             />
@@ -173,12 +177,24 @@ export const PlayerBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: EQ, Car Mode, Volume, Expand */}
+        {/* Right: Sleep indicator, EQ, Car Mode, Volume, Expand */}
         <div className="hidden lg:flex items-center justify-end gap-2 w-[30%]">
+          {sleepTimerMode !== 'off' && (
+            <button
+              type="button"
+              onClick={() => navigate({ name: 'now_playing' })}
+              title="Aktif uyku zamanlayıcısı"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#1D190F] border border-[#D4AF37]/40 text-[11px] font-mono text-[#E5C158]"
+            >
+              <Moon className="w-3 h-3" />
+              {sleepTimerMode === 'end_of_track' ? 'Son' : formatDuration(sleepTimerRemainingSec ?? 0)}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => navigate({ name: 'audio_settings' })}
-            title="Ses kalitesi ve ekolayzır"
+            title="10-Bant Ekolayzır ve Ses Ayarları"
             aria-label="Ses ayarları"
             className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#9B978E] hover:text-[#D4AF37] transition-colors"
           >
@@ -188,8 +204,8 @@ export const PlayerBar: React.FC = () => {
           <button
             type="button"
             onClick={() => setCarMode(true)}
-            title="Android Auto Araba Modu"
-            aria-label="Android Auto Araba Modu"
+            title="Araç Modu"
+            aria-label="Araç Modu"
             className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#9B978E] hover:text-[#D4AF37] transition-colors"
           >
             <Car className="w-4 h-4" />

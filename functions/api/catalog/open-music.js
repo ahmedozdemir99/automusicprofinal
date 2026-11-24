@@ -1,116 +1,483 @@
-const DEFINITIONS = {
-  nostalji:{terms:["Turkish vintage music","Turkish classical","Türk sanat müziği"],hints:["turkish","türk","osman","ottoman","makam","nostal","fasıl"]},
-  karadeniz:{terms:["Karadeniz kemençe","Turkish Black Sea folk","horon tulum"],hints:["karadeniz","kemençe","kemence","horon","tulum","trabzon","rize","black sea"]},
-  turkuler:{terms:["Turkish folk baglama","Anatolian folk music","türkü bağlama"],hints:["folk","türkü","turku","bağlama","baglama","anatol","anadolu","aşık","asik"]},
-  arabesk:{terms:["Turkish arabesk","arabesk müzik"],hints:["arabesk","arabesque"]},
-  turk_sanat:{terms:["Turkish classical makam","Turkish fasıl kanun","Ottoman classical music"],hints:["makam","fasıl","fasil","kanun","ud","tanbur","turkish classical","ottoman"]},
-  turk_pop:{terms:["Turkish pop","Türkçe pop","Istanbul pop"],hints:["turkish pop","türkçe pop","pop"]},
-  turk_rock:{terms:["Anatolian rock","Turkish rock"],hints:["anatolian rock","turkish rock","türk rock","anadolu rock"]},
-  ozgun:{terms:["Özgün müzik","Turkish acoustic folk"],hints:["özgün","ozgun","acoustic folk","türk"]},
-  ilahi:{terms:["Turkish ilahi","Türkçe ilahi","sufi hymn"],hints:["ilahi","hymn","sufi","tasavvuf"]},
-  ezgi:{terms:["Turkish ezgi","özgün ezgi"],hints:["ezgi","özgün","ozgun","ilahi"]},
-  tasavvuf:{terms:["Turkish sufi ney","Mevlevi music","tasavvuf"],hints:["sufi","tasavvuf","mevlevi","ney","sema"]},
-  nesid:{terms:["Turkish nasheed","nasheed"],hints:["nasheed","neşid","nesid","anasheed"]},
-  zikirli_ilahiler:{terms:["Turkish zikr ilahi","Sufi dhikr"],hints:["zikir","zikr","dhikr","ilahi","sufi"]},
-  arapca:{terms:["Arabic oud music","Arabic classical music"],hints:["arabic","oud","arab","maqam"]},
-  azerice:{terms:["Azerbaijan mugham","Azerbaijani folk tar"],hints:["azer","mugham","muğam","tar"]},
-  lazca:{terms:["Lazuri folk","Laz music tulum"],hints:["laz","lazuri","tulum"]}
+const VERIFIED_CATEGORY_ARCHIVES = {
+  nostalji: [
+    { identifier: "OBenimteMZeyyenSenar", artistDisplay: "Müzeyyen Senar", albumDisplay: "Taş Plak Seçkisi", year: "1960" },
+    { identifier: "SafiyeAyla", artistDisplay: "Safiye Ayla", albumDisplay: "Eski Plaklar", year: "1958" },
+    { identifier: "hamiyet-yuceses-bakmiyor-cesmi-siyah-tas-plak", artistDisplay: "Hamiyet Yüceses", albumDisplay: "Taş Plak Arşivi", year: "1955" },
+    { identifier: "hayat-genclik-boyunca", artistDisplay: "Münir Nurettin Selçuk", albumDisplay: "Nostalji Klasikleri", year: "1952" },
+    { identifier: "Nilufer", artistDisplay: "Nilüfer", albumDisplay: "Klasik Seçki", year: "1978", maxFiles: 4 },
+  ],
+  karadeniz: [
+    { identifier: "kazim-koyuncu-hayde", artistDisplay: "Kazım Koyuncu", albumDisplay: "Hayde", year: "2004", maxFiles: 4 },
+    { identifier: "VolkanKonak", artistDisplay: "Volkan Konak", albumDisplay: "Karadeniz Seçkisi", maxFiles: 6 },
+    { identifier: "2011BirolTopaloglu-kiyiBoyuKaradeniz", artistDisplay: "Birol Topaloğlu", albumDisplay: "Kıyı Boyu Karadeniz", year: "2011", maxFiles: 8 },
+    { identifier: "gun-gelir", artistDisplay: "Karadeniz Akustik", albumDisplay: "Yayla Ezgileri", maxFiles: 4 },
+  ],
+  arapca: [
+    { identifier: "y-2mate.com-haq-beladak-umm-kulthum", artistDisplay: "Ümmü Gülsüm (Umm Kulthum)", albumDisplay: "Klasik Arap Makamları" },
+    { identifier: "442010-10-04.halim_408", artistDisplay: "Abdel Halim Hafez", albumDisplay: "Klasik Arap Müziği" },
+    { identifier: "hussein-abdel-halim", artistDisplay: "Abdel Halim Hafez", albumDisplay: "Seçme Arapça Eserler", maxFiles: 6 },
+  ],
+  azerice: [
+    { identifier: "HetGebouw-Azerbaijan_mugam", artistDisplay: "Azerbaycan Muğam Topluluğu", albumDisplay: "Muğam & Tar" },
+    { identifier: "azerbaijanradio4", artistDisplay: "Azerbaycan Radyo Arşivi", albumDisplay: "Bakü Seçkisi" },
+    { identifier: "azerbaijanradio5", artistDisplay: "Azerbaycan Halk Müziği", albumDisplay: "Geleneksel Ezgiler" },
+  ],
+  lazca: [
+    { identifier: "TunannBeriYann01.07.2000BirolTopaloglu", artistDisplay: "Birol Topaloğlu", albumDisplay: "Lazca & Doğu Karadeniz", year: "2000" },
+    { identifier: "kazim-koyuncu-hayde", artistDisplay: "Kazım Koyuncu", albumDisplay: "Hayde (Karadeniz & Lazuri)", year: "2004", maxFiles: 4 },
+    { identifier: "TulumHoron", artistDisplay: "Karadeniz Tulum Topluluğu", albumDisplay: "Tulum & Horon" },
+    { identifier: "2011BirolTopaloglu-kiyiBoyuKaradeniz", artistDisplay: "Birol Topaloğlu", albumDisplay: "Kıyı Boyu Lazuri", year: "2011", maxFiles: 6 },
+  ],
+  turkuler: [
+    { identifier: "NesetErtasAcemKizi_201511", artistDisplay: "Neşet Ertaş", albumDisplay: "Bozkırın Tezenesi", maxFiles: 8 },
+    { identifier: "AltinTurkuler05.HerSabahHerSeher", artistDisplay: "Anadolu Türkü Şenliği", albumDisplay: "Altın Türküler" },
+    { identifier: "20Nisan2018TrkDiyar", artistDisplay: "Türkü Diyarı", albumDisplay: "Bağlama Seçkisi" },
+    { identifier: "25Mays2018TrkDiyar", artistDisplay: "Türkü Diyarı", albumDisplay: "Anadolu Halk Ezgileri" },
+  ],
+  arabesk: [
+    { identifier: "MslmGrsesSevYeterBalamalUzunVersiyon", artistDisplay: "Müslüm Gürses", albumDisplay: "Arabesk Klasikleri" },
+    { identifier: "001.-ferdi-tayfur-haram-oldu-full-album-1986-orijinal-kaset-kayit", artistDisplay: "Ferdi Tayfur", albumDisplay: "Haram Oldu", year: "1986", maxFiles: 6 },
+    { identifier: "001.-ferdi-tayfur-bende-ozledim-turkuola-1618-1982-ful-album", artistDisplay: "Ferdi Tayfur", albumDisplay: "Ben de Özledim", year: "1982", maxFiles: 6 },
+    { identifier: "YlddzTilbeAKmkSakla2012OrjinalOrhanGencebayEleBirEmBr_201406", artistDisplay: "Orhan Gencebay & Yıldız Tilbe", albumDisplay: "Özel Arabesk" },
+    { identifier: "seviyorum-seni-arabesk-pilakanto", artistDisplay: "Türkçe Arabesk Seçkisi", albumDisplay: "Gece Yolculuğu" },
+  ],
+  fantezi: [
+    { identifier: "YlddzTilbeAKmkSakla2012OrjinalOrhanGencebayEleBirEmBr_201406", artistDisplay: "Yıldız Tilbe & Orhan Gencebay", albumDisplay: "Fantezi Seçkisi", year: "2012" },
+    { identifier: "001.-ferdi-tayfur-bende-ozledim-turkuola-1618-1982-ful-album", artistDisplay: "Ferdi Tayfur", albumDisplay: "Ben de Özledim (Fantezi Klasik)", year: "1982", maxFiles: 4 },
+    { identifier: "Nilufer", artistDisplay: "Nilüfer", albumDisplay: "Duygusal Fantezi & Pop", maxFiles: 4 },
+    { identifier: "Sezen_Aksu_Fon_Mzikleri", artistDisplay: "Sezen Aksu", albumDisplay: "Duygusal Enstrümantal Seçki", maxFiles: 5 },
+  ],
+  turk_sanat: [
+    { identifier: "hayat-genclik-boyunca", artistDisplay: "Münir Nurettin Selçuk", albumDisplay: "Klasik Türk Sanat Müziği" },
+    { identifier: "birgamlihazaninseherinde", artistDisplay: "Münir Nurettin Selçuk", albumDisplay: "Fasıl Makamları" },
+    { identifier: "OBenimteMZeyyenSenar", artistDisplay: "Müzeyyen Senar", albumDisplay: "Fasıl Seçkisi" },
+    { identifier: "SafiyeAyla", artistDisplay: "Safiye Ayla", albumDisplay: "Klasik Makamlar" },
+  ],
+  turk_pop: [
+    { identifier: "Sezen_Aksu_Fon_Mzikleri", artistDisplay: "Sezen Aksu", albumDisplay: "Sezen Aksu Seçkisi", maxFiles: 8 },
+    { identifier: "Nilufer", artistDisplay: "Nilüfer", albumDisplay: "Nilüfer Seçkisi", maxFiles: 4 },
+    { identifier: "tarkan-vay-anam-vay_202305", artistDisplay: "Tarkan", albumDisplay: "Türkçe Pop Seçkisi" },
+    { identifier: "tarkan-ft.-mahmut-orhan-her-sey-fani", artistDisplay: "Tarkan & Mahmut Orhan", albumDisplay: "Modern Türkçe Pop" },
+  ],
+  turk_rock: [
+    { identifier: "erkinkoray-elektronikturkuler1974", artistDisplay: "Erkin Koray", albumDisplay: "Elektronik Türküler", year: "1974", maxFiles: 8 },
+    { identifier: "0888-tur8ku", artistDisplay: "Erkin Koray", albumDisplay: "Elektronik Türküler & Singles", year: "1974", maxFiles: 8 },
+    { identifier: "erkin-koray-1973-lp", artistDisplay: "Erkin Koray", albumDisplay: "Erkin Koray (1973 LP)", year: "1973", maxFiles: 8 },
+    { identifier: "cemkaraca_edirdahan-safinaz", artistDisplay: "Cem Karaca & Edirdahan", albumDisplay: "Safinaz", year: "1978", maxFiles: 4 },
+    { identifier: "barismancocemkaracauzunincebiryoldayim", artistDisplay: "Barış Manço & Cem Karaca", albumDisplay: "Uzun İnce Bir Yoldayım", maxFiles: 4 },
+    { identifier: "baris-manco-sozum-meclisten-disari-flac", artistDisplay: "Barış Manço", albumDisplay: "Sözüm Meclisten Dışarı", year: "1981", maxFiles: 8 },
+    { identifier: "baris-manco-2023-2023-1975", artistDisplay: "Barış Manço", albumDisplay: "2023 Anadolu Rock", year: "1975", maxFiles: 6 },
+  ],
+  ozgun: [
+    { identifier: "AhmetKayaSoyle", artistDisplay: "Ahmet Kaya", albumDisplay: "Özgün Seçki" },
+    { identifier: "AhmetKayaKafamaSAkarGiderim", artistDisplay: "Ahmet Kaya", albumDisplay: "Seçme Eserler" },
+    { identifier: "03.-zulfu-livaneli-buyuk-insanlik", artistDisplay: "Zülfü Livaneli", albumDisplay: "Özgün Klasikler", maxFiles: 6 },
+    { identifier: "zulfu-livaneli-gozlerin", artistDisplay: "Zülfü Livaneli", albumDisplay: "Akustik Özgün" },
+  ],
+  ilahi: [
+    { identifier: "Abdurrahmannl-ZahidSultan", artistDisplay: "Abdurrahman Önül", albumDisplay: "Gönülden Gönüle", maxFiles: 8 },
+    { identifier: "ne-olur-gel-hele-abdurrahman-onul-ilahi", artistDisplay: "Abdurrahman Önül", albumDisplay: "Seçkin İlahiler" },
+    { identifier: "NefseUyup-M.eminAy", artistDisplay: "Mehmet Emin Ay", albumDisplay: "Türkçe İlahi Seçkisi" },
+  ],
+  ezgi: [
+    { identifier: "MustafaCihat-HepsiOndadr", artistDisplay: "Mustafa Cihat", albumDisplay: "Özgün Türkçe Ezgiler" },
+    { identifier: "SehidTahdndaOmerKaraoglu", artistDisplay: "Ömer Karaoğlu", albumDisplay: "Klasik Ezgiler" },
+    { identifier: "MustafaCihatGrddkKiEditByEnderHafazm", artistDisplay: "Mustafa Cihat", albumDisplay: "Akustik Ezgiler" },
+  ],
+  nesid: [
+    { identifier: "y-2mate.com-maher-zain-rahmatun-lil-alameen-official-music-video", artistDisplay: "Maher Zain", albumDisplay: "Seçkin Neşidler" },
+    { identifier: "emad--almansery--mp3--anasheed----37--nasheed---from-el-moslem.com", artistDisplay: "Emad Al-Mansery", albumDisplay: "Enstrümansız Vokal Neşid", maxFiles: 8 },
+  ],
+  zikirli_ilahiler: [
+    { identifier: "Abdurrahmannl-ZahidSultan", artistDisplay: "Abdurrahman Önül", albumDisplay: "Zikirli İlahiler", maxFiles: 8 },
+    { identifier: "NefseUyup-M.eminAy", artistDisplay: "Mehmet Emin Ay", albumDisplay: "Manevi Zikir Seçkisi" },
+  ],
+  tasavvuf: [
+    { identifier: "NeyTaksimiMystery", artistDisplay: "Ney Taksimi Seçkisi", albumDisplay: "Tasavvuf & Sükûnet" },
+    { identifier: "Tasavvuf2", artistDisplay: "Tasavvuf Topluluğu", albumDisplay: "Mevlevi & Ney Arşivi" },
+  ],
 };
-const normalize=s=>String(s||"").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
-const hasAny=(s,terms)=>terms.some(term=>normalize(s).includes(normalize(term)));
-const isTurkish=lang=>normalize(lang).includes("turk");
-const foreignLanguages=new Set(["en","fr","es","de","it","ru","pt","ar","fa","az"]);
-const RULES={
-  nostalji:{positive:["nostalji","nostalgia","oldies","vintage","78rpm","gramofon","tas plak"],negative:["pop","rock","hiphop","electronic"]},
-  karadeniz:{positive:["karadeniz","black sea","horon","kemence","tulum","trabzon","rize","artvin"],negative:["arabesk","pop","rock"]},
-  turkuler:{positive:["turku","folk","baglama","halk muzigi","asik","anatolian folk"],negative:["pop","rock","arabesk","electronic"]},
-  arabesk:{positive:["arabesk","arabesque"],negative:["pop","rock","folk"]},
-  turk_sanat:{positive:["turk sanat","turkish classical","ottoman classical","fasil","makam","tanbur","kanun"],negative:["pop","rock","electronic"]},
-  turk_pop:{positive:["pop"],negative:["rock","arabesk","folk","metal","hiphop","electronic","classical"]},
-  turk_rock:{positive:["rock","anatolian rock","anadolu rock"],negative:["pop","arabesk","folk","metal"]},
-  ozgun:{positive:["ozgun","singer songwriter","acoustic folk"],negative:["pop","rock","arabesk"]},
-  ilahi:{positive:["ilahi","islamic hymn","turkish hymn"],negative:["pop","rock","arabesk"]},
-  ezgi:{positive:["ezgi","ozgun ezgi"],negative:["pop","rock","arabesk"]},
-  tasavvuf:{positive:["tasavvuf","sufi","mevlevi","sema","ney"],negative:["pop","rock","arabesk"]},
-  nesid:{positive:["nasheed","nesid","anasheed"],negative:["pop","rock"]},
-  zikirli_ilahiler:{positive:["zikir","zikr","dhikr"],negative:["pop","rock"]},
-  arapca:{positive:["arabic","arab","oud","maqam"],negative:["turkish pop","turkish rock"]},
-  azerice:{positive:["azerbaijan","azerbaijani","azerice","mugham","mugam"],negative:["turkish pop"]},
-  lazca:{positive:["lazuri","lazca","laz music"],negative:["turkish pop"]}
-};
-function validCategory(meta,category,lang){
-  const rule=RULES[category];if(!rule)return false;
-  const title=normalize(meta.title),artist=normalize(meta.artist),album=normalize(meta.album);
-  const tags=normalize(meta.tags),description=normalize(meta.description);
-  const text=[title,artist,album,tags,description].join(" ");
-  const songLang=normalize(meta.lang);
-  if(!title||!artist||artist==="unknown"||artist==="internet archive")return false;
-  if(isTurkish(lang)){
-    if(songLang&&foreignLanguages.has(songLang))return false;
-    // No evidence of Turkish origin/lyrics => no claim that the recording is Turkish.
-    const origin= songLang==="tr"||hasAny(text,["turkish","turkce","turkiye","turkey","istanbul","anatolian","anadolu","karadeniz","turku","baglama","osmanli","ottoman","mevlevi"]);
-    if(!origin)return false;
+
+function cleanTitle(raw, fallback) {
+  const s = String(raw || "")
+    .replace(/^.*\//, "")
+    .replace(/\.(mp3|ogg|flac|m4a|wav)$/i, "")
+    .replace(/^y-?2mate\.com\s*[-_]\s*/i, "")
+    .replace(/www\.[a-z0-9.-]+/gi, "")
+    .replace(/^\d{1,3}[\s._-]+(?=[a-zA-ZğüşöçıİĞÜŞÖÇ])/, "")
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return s.length >= 2 ? s : fallback;
+}
+
+function detectTrackType(title, album = "") {
+  const text = `${title} ${album}`.toLocaleLowerCase("tr-TR");
+  if (/\bkaraoke\b|\bbacking track\b/.test(text)) return "karaoke";
+  if (/\bremix\b|\bclub mix\b|\bmashup\b/.test(text)) return "remix";
+  if (/\bcover\b|\btribute\b/.test(text)) return "cover";
+  if (/\blive\b|\bcanlı\b|\bkonser\b|\bunplugged\b/.test(text)) return "live";
+  return "studio";
+}
+
+function formatPriority(name) {
+  const lower = String(name || "").toLowerCase();
+  if (lower.endsWith(".mp3")) return 3;
+  if (lower.endsWith(".flac")) return 2;
+  if (lower.endsWith(".ogg")) return 1;
+  return 0;
+}
+
+function parseDurationSec(raw) {
+  if (typeof raw === "number") return Number.isFinite(raw) ? Math.round(raw) : 0;
+  if (!raw) return 0;
+  const s = String(raw).trim();
+  if (s.includes(":")) {
+    const parts = s.split(":").map((p) => Number.parseFloat(p));
+    if (parts.every((n) => Number.isFinite(n))) {
+      if (parts.length === 3) return Math.round(parts[0] * 3600 + parts[1] * 60 + parts[2]);
+      if (parts.length === 2) return Math.round(parts[0] * 60 + parts[1]);
+    }
   }
-  if(category==="arapca"&&songLang&&songLang!=="ar"&&!hasAny(text,["arabic","arab"]))return false;
-  if(category==="azerice"&&songLang&&songLang!=="az"&&!hasAny(text,["azer","mugham","mugam"]))return false;
-  // Category evidence must describe the recording, not merely the query used to find it.
-  if(!hasAny([title,album,tags,description].join(" "),rule.positive))return false;
-  if(hasAny(tags,rule.negative))return false;
-  return true;
+  const n = Number.parseFloat(s);
+  return Number.isFinite(n) ? Math.round(n) : 0;
 }
-const safeString=(s,n=160)=>String(s||"").replace(/<[^>]+>/g,"").slice(0,n);
-async function jamendo(env,terms,category,lang,genre,motif,offset){
-  if(!env.JAMENDO_CLIENT_ID)return [];
-  const queries=terms.slice(0,3);
-  const responses=await Promise.allSettled(queries.map(async query=>{
-    const u=new URL("https://api.jamendo.com/v3.0/tracks/");
-    for(const [k,v] of Object.entries({client_id:env.JAMENDO_CLIENT_ID,format:"json",limit:"60",offset:String(offset),search:query,audioformat:"mp32",include:"musicinfo+licenses",type:"single albumtrack",imagesize:"300"}))u.searchParams.set(k,v);
-    // Jamendo's lang filter refers to lyrics language; use it for Turkish vocal catalog.
-    if(isTurkish(lang))u.searchParams.set("lang","tr");
-    const res=await fetch(u.toString());if(!res.ok)throw Error("Jamendo "+res.status);
-    const data=await res.json();if(data.headers?.status==="failed")throw Error("Jamendo rejected request");
-    return(data.results||[]).flatMap(item=>{
-      if(!item.audio?.startsWith("https://"))return[];
-      const meta={title:item.name,artist:item.artist_name,album:item.album_name,lang:normalize(item.musicinfo?.lang),tags:[...(item.musicinfo?.tags?.genres||[]),...(item.musicinfo?.tags?.vartags||[])].join(" ")};
-      if(!validCategory(meta,category,lang))return[];
-      return[{contentId:"jamendo:"+item.id,title:item.name,artistId:"jamendo-artist:"+item.artist_id,artistName:item.artist_name,album:item.album_name||genre,categoryId:category,language:lang,genre,durationSec:Number(item.duration)||0,streamUrl:item.audio,sourceProvider:"jamendo",downloadAllowed:Boolean(item.audiodownload_allowed),licenseName:item.license_ccurl||"Jamendo",bitrateKbps:192,format:"MP3",motif,coverUrl:item.image||item.album_image||undefined}];
+
+export async function fetchVerifiedCategoryTracks(categoryId, lang, genre, motif) {
+  const sources = VERIFIED_CATEGORY_ARCHIVES[categoryId] || [];
+  if (!sources.length) return [];
+  const settled = await Promise.allSettled(
+    sources.map(async (src) => {
+      const res = await fetch(
+        `https://archive.org/metadata/${encodeURIComponent(src.identifier)}/files`,
+        {
+          headers: { Accept: "application/json", "User-Agent": "AutoMusicPro4/1.0" },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      const rawAudio = (data.result || []).filter(
+        (f) =>
+          f.name &&
+          /\.(mp3|ogg|flac)$/i.test(f.name) &&
+          !f.name.includes("_64kb") &&
+          !f.name.startsWith("__") &&
+          !/(sample|preview|spectrogram|_meta)/i.test(f.name)
+      );
+      const bestByStem = new Map();
+      for (const f of rawAudio) {
+        const stem = f.name.replace(/\.(mp3|ogg|flac)$/i, "").toLowerCase();
+        const prev = bestByStem.get(stem);
+        if (!prev || formatPriority(f.name) > formatPriority(prev.name)) {
+          bestByStem.set(stem, f);
+        }
+      }
+      const coverUrl = `https://archive.org/services/img/${encodeURIComponent(src.identifier)}`;
+      return Array.from(bestByStem.values())
+        .slice(0, src.maxFiles || 6)
+        .flatMap((f) => {
+          const dur = parseDurationSec(f.length);
+          if (dur > 0 && dur < 40) return [];
+          const encodedPath = f.name.split("/").map(encodeURIComponent).join("/");
+          const title = cleanTitle(
+            f.title && f.title.trim().length > 2 && !/^track\s*\d+$/i.test(f.title.trim())
+              ? f.title
+              : f.name,
+            src.albumDisplay
+          );
+          const ext = f.name.split(".").pop()?.toUpperCase();
+          return [
+            {
+              contentId: `db:${categoryId}:${src.identifier}:${f.name}`,
+              title,
+              artistId: `artist:${src.artistDisplay.toLowerCase().replace(/[^a-z0-9ğüşöçı]+/gi, "-")}`,
+              artistName: src.artistDisplay,
+              album: src.albumDisplay,
+              categoryId,
+              language: lang,
+              genre,
+              durationSec: Number.isFinite(dur) && dur > 0 ? dur : 0,
+              streamUrl: `https://archive.org/download/${encodeURIComponent(src.identifier)}/${encodedPath}`,
+              sourceProvider: "internet_archive",
+              downloadAllowed: true,
+              licenseName: "Internet Archive Açık Arşiv",
+              bitrateKbps: f.bitrate ? Math.round(Number.parseFloat(f.bitrate)) || 192 : 192,
+              format: ext === "FLAC" ? "FLAC" : ext === "OGG" ? "OGG" : "MP3",
+              motif,
+              coverUrl,
+              year: src.year,
+              trackType: detectTrackType(title, src.albumDisplay),
+            },
+          ];
+        });
+    })
+  );
+  return settled.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
+async function searchArchive(q, categoryId, lang, genre, motif, offset) {
+  const page = Math.floor(offset / 6) + 1;
+  const u = new URL("https://archive.org/advancedsearch.php");
+  const safeQ = q.replace(/["\\():]/g, " ").trim();
+  u.searchParams.set(
+    "q",
+    `(title:(${safeQ}) OR creator:(${safeQ})) AND mediatype:(audio) AND format:(VBR MP3 OR MP3) AND NOT access-restricted-item:true`
+  );
+  for (const field of ["identifier", "title", "creator", "year"]) u.searchParams.append("fl[]", field);
+  u.searchParams.set("rows", "6");
+  u.searchParams.set("page", String(page));
+  u.searchParams.set("output", "json");
+  const res = await fetch(u.toString(), {
+    headers: { Accept: "application/json", "User-Agent": "AutoMusicPro4/1.0" },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const docs = (data.response?.docs || []).slice(0, 5);
+  const settled = await Promise.allSettled(
+    docs.map(async (doc) => {
+      const r = await fetch(`https://archive.org/metadata/${encodeURIComponent(doc.identifier)}/files`, {
+        headers: { Accept: "application/json", "User-Agent": "AutoMusicPro4/1.0" },
+        signal: AbortSignal.timeout(7000),
+      });
+      if (!r.ok) return [];
+      const meta = await r.json();
+      const docTitle = Array.isArray(doc.title) ? doc.title[0] : doc.title || doc.identifier;
+      const docCreator = Array.isArray(doc.creator) ? doc.creator[0] : doc.creator || "Açık Arşiv";
+      const coverUrl = `https://archive.org/services/img/${encodeURIComponent(doc.identifier)}`;
+      return (meta.result || [])
+        .filter(
+          (f) =>
+            f.name &&
+            /\.(mp3|ogg|flac)$/i.test(f.name) &&
+            !f.name.includes("_64kb") &&
+            !f.name.startsWith("__") &&
+            !/(sample|preview|spectrogram|_meta)/i.test(f.name)
+        )
+        .slice(0, 4)
+        .flatMap((f) => {
+          const dur = parseDurationSec(f.length);
+          if (dur > 0 && dur < 45) return [];
+          const encodedPath = f.name.split("/").map(encodeURIComponent).join("/");
+          const title = cleanTitle(f.title || f.name, docTitle);
+          const artistName = String(f.artist || docCreator || "Açık Arşiv").trim();
+          const ext = f.name.split(".").pop()?.toUpperCase();
+          return [
+            {
+              contentId: `ia:${doc.identifier}:${f.name}`,
+              title,
+              artistId: `artist:${artistName.toLowerCase().replace(/[^a-z0-9ğüşöçı]+/gi, "-")}`,
+              artistName,
+              album: f.album || docTitle,
+              categoryId,
+              language: lang,
+              genre,
+              durationSec: Number.isFinite(dur) ? dur : 0,
+              streamUrl: `https://archive.org/download/${encodeURIComponent(doc.identifier)}/${encodedPath}`,
+              sourceProvider: "internet_archive",
+              downloadAllowed: true,
+              licenseName: "Internet Archive Açık Arşiv",
+              bitrateKbps: f.bitrate ? Math.round(Number.parseFloat(f.bitrate)) || 192 : 192,
+              format: ext === "FLAC" ? "FLAC" : ext === "OGG" ? "OGG" : "MP3",
+              motif,
+              coverUrl,
+              year: doc.year ? String(doc.year).slice(0, 4) : undefined,
+              trackType: detectTrackType(title, f.album || docTitle),
+            },
+          ];
+        });
+    })
+  );
+  return settled.flatMap((x) => (x.status === "fulfilled" ? x.value : []));
+}
+
+async function searchAudius(q, categoryId, lang, genre, motif, offset) {
+  try {
+    const u = new URL("https://discoveryprovider.audius.co/v1/tracks/search");
+    u.searchParams.set("query", q);
+    u.searchParams.set("limit", "12");
+    if (offset > 0) u.searchParams.set("offset", String(offset));
+    const res = await fetch(u.toString(), {
+      headers: { Accept: "application/json", "User-Agent": "AutoMusicPro4/1.0" },
+      signal: AbortSignal.timeout(7000),
     });
-  }));
-  return responses.flatMap(r=>r.status==="fulfilled"?r.value:[]);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.data || [])
+      .filter((t) => t.id && t.title && t.is_streamable !== false && (!t.duration || t.duration >= 45))
+      .map((t) => ({
+        contentId: `audius:${t.id}`,
+        title: String(t.title).trim(),
+        artistId: `audius-artist:${t.user?.id || "audius"}`,
+        artistName: t.user?.name || t.user?.handle || "Audius Sanatçısı",
+        album: t.genre ? `Audius · ${t.genre}` : "Audius Açık Katalog",
+        categoryId,
+        language: lang,
+        genre: t.genre || genre,
+        durationSec: Number(t.duration) || 0,
+        streamUrl: `https://discoveryprovider.audius.co/v1/tracks/${encodeURIComponent(t.id)}/stream`,
+        sourceProvider: "audius",
+        downloadAllowed: false,
+        licenseName: "Audius Açık Dinleme",
+        bitrateKbps: 320,
+        format: "MP3",
+        motif,
+        coverUrl: t.artwork?.["480x480"] || t.artwork?.["150x150"],
+        year: t.release_date ? String(t.release_date).slice(0, 4) : undefined,
+        trackType: detectTrackType(t.title),
+      }));
+  } catch {
+    return [];
+  }
 }
-async function archive(terms,category,lang,genre,motif){
-  const searches=terms.slice(0,3);
-  const results=await Promise.allSettled(searches.map(async term=>{
-    const u=new URL("https://archive.org/advancedsearch.php");
-    // Search metadata; do not trust a broad OR expression as proof of language.
-    const phrase=term.replace(/[^\p{L}\p{N} -]/gu," ").trim();
-    u.searchParams.set("q",'mediatype:audio AND licenseurl:* AND (title:"'+phrase+'" OR subject:"'+phrase+'" OR description:"'+phrase+'")');
-    for(const field of ["identifier","title","creator","licenseurl","subject","language","description"])u.searchParams.append("fl[]",field);
-    u.searchParams.set("rows","12");u.searchParams.set("output","json");
-    const response=await fetch(u.toString());if(!response.ok)return[];
-    const data=await response.json();
-    const docs=(data.response?.docs||[]).filter(d=>d.licenseurl).filter(d=>validCategory({title:d.title,artist:d.creator,tags:Array.isArray(d.subject)?d.subject.join(" "):d.subject,lang:Array.isArray(d.language)?d.language[0]:d.language,description:d.description},category,lang)).slice(0,5);
-    const items=await Promise.allSettled(docs.map(async doc=>{
-      const r=await fetch("https://archive.org/metadata/"+encodeURIComponent(doc.identifier)+"/files");if(!r.ok)return[];
-      const d=await r.json();return(d.result||[]).filter(f=>/\.(mp3|ogg)$/i.test(f.name||"")&&!/_64kb/i.test(f.name||"")&&!/(_meta|spectrogram|sample|preview)/i.test(f.name||"")).filter(f=>validCategory({title:f.title||doc.title,artist:f.artist||doc.creator,album:f.album||doc.title,tags:Array.isArray(doc.subject)?doc.subject.join(" "):doc.subject,lang:Array.isArray(doc.language)?doc.language[0]:doc.language,description:doc.description},category,lang)).slice(0,4).map(f=>({contentId:"ia:"+doc.identifier+":"+f.name,title:safeString(f.title||f.name),artistId:"ia:"+doc.identifier,artistName:safeString(f.artist||doc.creator||"Internet Archive"),album:safeString(f.album||doc.title),categoryId:category,language:lang,genre,durationSec:Number(f.length)||0,streamUrl:"https://archive.org/download/"+encodeURIComponent(doc.identifier)+"/"+f.name.split("/").map(encodeURIComponent).join("/"),sourceProvider:"internet_archive",downloadAllowed:false,licenseName:safeString(doc.licenseurl,240),format:/\.ogg$/i.test(f.name)?"OGG":"MP3",motif,coverUrl:"https://archive.org/services/img/"+encodeURIComponent(doc.identifier)}));
-    }));
-    return items.flatMap(x=>x.status==="fulfilled"?x.value:[]);
-  }));
-  return results.flatMap(r=>r.status==="fulfilled"?r.value:[]);
+
+async function searchWikimedia(q, categoryId, lang, genre, motif, offset) {
+  try {
+    const u = new URL("https://commons.wikimedia.org/w/api.php");
+    u.searchParams.set("action", "query");
+    u.searchParams.set("generator", "search");
+    u.searchParams.set("gsrsearch", `${q} filetype:audio`);
+    u.searchParams.set("gsrnamespace", "6");
+    u.searchParams.set("gsrlimit", "6");
+    if (offset > 0) u.searchParams.set("gsroffset", String(offset));
+    u.searchParams.set("prop", "imageinfo");
+    u.searchParams.set("iiprop", "url|mime|duration|extmetadata");
+    u.searchParams.set("format", "json");
+    const res = await fetch(u.toString(), {
+      headers: { Accept: "application/json", "User-Agent": "AutoMusicPro4/1.0 (https://automusicpro4.pages.dev/)" },
+      signal: AbortSignal.timeout(7000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const out = [];
+    for (const page of Object.values(data.query?.pages || {})) {
+      const info = page.imageinfo?.[0];
+      if (!info?.url || !info.url.startsWith("https://upload.wikimedia.org/")) continue;
+      if (!/\.(mp3|ogg|oga|flac|wav)$/i.test(info.url)) continue;
+      const dur = Math.round(Number(info.duration) || 0);
+      if (dur > 0 && dur < 40) continue;
+      const title = cleanTitle(String(page.title || "").replace(/^File:/i, ""), q);
+      const rawArtist = String(info.extmetadata?.Artist?.value || "").replace(/<[^>]+>/g, "").trim();
+      const artistName = rawArtist ? rawArtist.slice(0, 80) : "Wikimedia Commons";
+      const ext = info.url.split(".").pop()?.toUpperCase();
+      out.push({
+        contentId: `wiki:${page.pageid}`,
+        title,
+        artistId: `wiki-artist:${artistName.toLowerCase().replace(/[^a-z0-9ğüşöçı]+/gi, "-")}`,
+        artistName,
+        album: "Wikimedia Commons Ses Arşivi",
+        categoryId,
+        language: lang,
+        genre,
+        durationSec: dur,
+        streamUrl: info.url,
+        sourceProvider: "wikimedia",
+        downloadAllowed: true,
+        licenseName: info.extmetadata?.LicenseShortName?.value || "Wikimedia Açık Lisans",
+        format: ext === "FLAC" ? "FLAC" : ext === "WAV" ? "WAV" : ext === "MP3" ? "MP3" : "OGG",
+        motif,
+        trackType: detectTrackType(title),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
-export async function onRequestGet({request,env}){
-  const url=new URL(request.url);
-  const category=(url.searchParams.get("categoryId")||"turkuler").slice(0,40);
-  const lang=(url.searchParams.get("language")||"Türkçe").slice(0,40);
-  const genre=(url.searchParams.get("genre")||"Müzik").slice(0,40);
-  const motif=(url.searchParams.get("motif")||"anatolia").slice(0,30);
-  const q=(url.searchParams.get("q")||"").trim().slice(0,100);
-  const offset=Math.min(180,Math.max(0,Number(url.searchParams.get("offset"))||0));
-  const def=DEFINITIONS[category];
-  const terms=q && (!def || url.searchParams.get("searchMode")==="1") ? [q] : def ? def.terms : [];
-  if(!terms.length)return Response.json({tracks:[],notice:"Arama terimi bulunamadı."});
-  const [j,a]=await Promise.allSettled([jamendo(env,terms,category,lang,genre,motif,offset),archive(terms,category,lang,genre,motif)]);
-  const merged=[...(j.status==="fulfilled"?j.value:[]),...(a.status==="fulfilled"?a.value:[])];
-  const seen=new Set(),tracks=merged.filter(t=>{const id=t.contentId;if(seen.has(id))return false;seen.add(id);return true}).sort((a,b)=>a.artistName.localeCompare(b.artistName,"tr")||a.album.localeCompare(b.album,"tr")||a.title.localeCompare(b.title,"tr")).slice(0,80);
-  return Response.json({tracks,provider:tracks.length?(tracks.some(t=>t.sourceProvider==="jamendo")?"jamendo":"internet_archive"):"empty",notice:tracks.length?undefined:"Bu kategoride dili ve türü doğrulanabilen lisanslı kayıt bulunamadı. Yanlış veya yabancı kayıt gösterilmiyor.",total:tracks.length,categoryId:category},{headers:{"Cache-Control":"public, max-age=300"}});
+
+async function searchJamendo(env, q, categoryId, lang, genre, motif, offset) {
+  if (!env?.JAMENDO_CLIENT_ID) return [];
+  try {
+    const u = new URL("https://api.jamendo.com/v3.0/tracks/");
+    for (const [k, v] of Object.entries({
+      client_id: env.JAMENDO_CLIENT_ID,
+      format: "json",
+      limit: "12",
+      offset: String(offset),
+      search: q,
+      audioformat: "mp32",
+      include: "licenses",
+      imagesize: "300",
+    })) {
+      u.searchParams.set(k, v);
+    }
+    const res = await fetch(u.toString(), { signal: AbortSignal.timeout(7000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || [])
+      .filter((t) => t.audio?.startsWith("https://") && (Number(t.duration) || 0) >= 45)
+      .map((t) => ({
+        contentId: `jamendo:${t.id}`,
+        title: t.name,
+        artistId: `jamendo-artist:${t.artist_id}`,
+        artistName: t.artist_name,
+        album: t.album_name || genre,
+        categoryId,
+        language: lang,
+        genre,
+        durationSec: Number(t.duration) || 0,
+        streamUrl: t.audio,
+        sourceProvider: "jamendo",
+        downloadAllowed: Boolean(t.audiodownload_allowed),
+        licenseName: t.license_ccurl || "Jamendo CC",
+        bitrateKbps: 192,
+        format: "MP3",
+        motif,
+        coverUrl: t.image || t.album_image || undefined,
+        trackType: detectTrackType(t.name, t.album_name || ""),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function onRequestGet({ request, env }) {
+  const url = new URL(request.url);
+  const category = (url.searchParams.get("categoryId") || "turkuler").slice(0, 40);
+  const lang = (url.searchParams.get("language") || "Türkçe").slice(0, 40);
+  const genre = (url.searchParams.get("genre") || "Müzik").slice(0, 40);
+  const motif = (url.searchParams.get("motif") || "turkuler").slice(0, 30);
+  const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
+  const offset = Math.min(200, Math.max(0, Number(url.searchParams.get("offset")) || 0));
+
+  let merged = [];
+  if (!q && VERIFIED_CATEGORY_ARCHIVES[category]) {
+    merged = await fetchVerifiedCategoryTracks(category, lang, genre, motif);
+  } else if (q) {
+    const [ia, aud, wiki, jam] = await Promise.allSettled([
+      searchArchive(q, category, lang, genre, motif, offset),
+      searchAudius(q, category, lang, genre, motif, offset),
+      searchWikimedia(q, category, lang, genre, motif, offset),
+      searchJamendo(env, q, category, lang, genre, motif, offset),
+    ]);
+    merged = [
+      ...(ia.status === "fulfilled" ? ia.value : []),
+      ...(aud.status === "fulfilled" ? aud.value : []),
+      ...(jam.status === "fulfilled" ? jam.value : []),
+      ...(wiki.status === "fulfilled" ? wiki.value : []),
+    ];
+  }
+
+  const seenIds = new Set();
+  const seenKeys = new Set();
+  const tracks = merged.filter((t) => {
+    const key = `${String(t.artistName || "").toLocaleLowerCase("tr-TR")}::${String(t.title || "").toLocaleLowerCase("tr-TR")}`;
+    if (!t.contentId || seenIds.has(t.contentId) || seenKeys.has(key)) return false;
+    seenIds.add(t.contentId);
+    seenKeys.add(key);
+    return true;
+  });
+
+  return Response.json(
+    {
+      tracks,
+      offset,
+      hasMore: tracks.length >= 8,
+      total: tracks.length,
+      categoryId: category,
+      notice: tracks.length ? undefined : "Aramanızla eşleşen ücretsiz açık lisanslı tam parça bulunamadı.",
+    },
+    { headers: { "Cache-Control": "public, max-age=300" } }
+  );
 }

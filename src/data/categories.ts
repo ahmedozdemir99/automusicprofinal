@@ -1,4 +1,4 @@
-import { MusicCategory } from '../types/media';
+import type { MusicCategory } from '../types/media.ts';
 
 export const DEFAULT_CATEGORIES: MusicCategory[] = [
   {
@@ -188,5 +188,16 @@ export const DEFAULT_CATEGORIES: MusicCategory[] = [
     accentHex: '#D4AF37',
     archiveQuery: '',
     isQuran: true,
+  },
+  {
+    id: 'fantezi',
+    order: 18,
+    name: 'Fantezi',
+    subtitle: 'Duygusal fantezi ve klasik sahne eserleri',
+    language: 'Türkçe',
+    genre: 'Fantezi',
+    motif: 'fantezi',
+    accentHex: '#D2A84B',
+    archiveQuery: '"Yıldız Tilbe" OR "Orhan Gencebay" OR "Ferdi Tayfur" OR "Fantezi"',
   },
 ];

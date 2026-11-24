@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CategorySymbolId } from '../types/media';
 import { CategorySymbol } from './CategorySymbol';
 
@@ -37,6 +37,7 @@ const MOTIF_GRADIENTS: Record<CategorySymbolId, string> = {
   lazca: 'from-[#101B1B] via-[#101314] to-[#09090B]',
   turkuler: 'from-[#23180E] via-[#14110E] to-[#09090B]',
   arabesk: 'from-[#1F1316] via-[#141013] to-[#09090B]',
+  fantezi: 'from-[#23151B] via-[#151015] to-[#09090B]',
   turk_sanat: 'from-[#1E190E] via-[#13120F] to-[#09090B]',
   turk_pop: 'from-[#1B171D] via-[#131216] to-[#09090B]',
   turk_rock: 'from-[#201412] via-[#141111] to-[#09090B]',
@@ -53,17 +54,35 @@ const MOTIF_GRADIENTS: Record<CategorySymbolId, string> = {
 export const ArtworkCover: React.FC<ArtworkCoverProps> = ({
   motif,
   imageUrl,
+  title,
   arabicTitle,
   size = 'md',
   className = '',
 }) => {
   const safeMotif: CategorySymbolId = MOTIF_GRADIENTS[motif] ? motif : 'custom';
   const showDetail = size === 'lg' || size === 'xl';
+  const [imgFailed, setImgFailed] = useState(false);
 
-  if (imageUrl) {
+  useEffect(() => {
+    setImgFailed(false);
+  }, [imageUrl]);
+
+  const validImageUrl =
+    imageUrl && !imgFailed && /^https?:\/\//i.test(imageUrl) ? imageUrl : null;
+
+  if (validImageUrl) {
     return (
-      <div className={`relative shrink-0 overflow-hidden border border-[#D4AF37]/25 select-none ${SIZE_CLASSES[size]} ${className}`}>
-        <img src={imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+      <div
+        className={`relative shrink-0 overflow-hidden bg-[#121216] border border-[#D4AF37]/25 select-none ${SIZE_CLASSES[size]} ${className}`}
+      >
+        <img
+          src={validImageUrl}
+          alt={title ? `${title} kapak görseli` : ''}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
+        />
       </div>
     );
   }

@@ -12,12 +12,19 @@ import {
   Search,
   Shuffle,
   Upload,
+  X,
 } from 'lucide-react';
 import { ArtworkCover } from '../components/ArtworkCover';
-import { TrackRow } from '../components/TrackRow';
+import { TrackRow, formatDuration } from '../components/TrackRow';
 import { useAutoMusic } from '../context/AutoMusicContext';
 import { RECITERS, SURAHS, buildSurahMediaItem } from '../data/quranData';
-import { normalizeSearchText } from '../services/catalogRepository';
+import {
+  VerifiedAlbum,
+  VerifiedAlbumTrack,
+  fuzzyMatchScore,
+  normalizeSearchText,
+  openMusicRepository,
+} from '../services/catalogRepository';
 import { ArtistSummary, MediaItem } from '../types/media';
 
 // ============================================================
@@ -470,89 +477,413 @@ export const ArtistDetailScreen: React.FC<{ artistId: string }> = ({ artistId })
 // Screen 5: Şarkı Listesi (Spotify-style DB Playlists + Filters + Phone Upload)
 // ============================================================
 
-const AlbumCover: React.FC<{imageUrl:string;title:string}> = ({imageUrl,title}) => {
-  const [failed,setFailed]=useState(false);
-  useEffect(()=>setFailed(false),[imageUrl]);
-  return <div className="aspect-square bg-gradient-to-br from-[#352619] via-[#191611] to-[#09090B] flex items-center justify-center relative overflow-hidden">
-    <ArtworkCover motif="nostalji" size="xl" className="!w-full !h-full !rounded-none !border-0" />
-    {!failed && imageUrl && <img src={imageUrl} alt={title+' albüm kapağı'} loading="lazy"
-      className="absolute inset-0 w-full h-full object-cover" onError={()=>setFailed(true)} />}
-    {failed && <span className="absolute bottom-1 left-1 right-1 text-center text-[10px] text-[#D4AF37] bg-black/60 rounded">Temsili kapak</span>}
-  </div>;
+const AlbumCover: React.FC<{ imageUrl: string; title: string; categoryId?: string }> = ({
+  imageUrl,
+  title,
+  categoryId,
+}) => {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [imageUrl]);
+
+  if (!failed && imageUrl) {
+    return (
+      <div className="aspect-square bg-[#121216] relative overflow-hidden">
+        <img
+          src={imageUrl}
+          alt={`${title} albüm kapağı`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          onError={() => setFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-square bg-gradient-to-br from-[#231D14] via-[#151419] to-[#0B0B0E] flex items-center justify-center relative overflow-hidden">
+      <ArtworkCover motif="nostalji" categoryId={categoryId} size="xl" className="!w-full !h-full !rounded-none !border-0" />
+    </div>
+  );
 };
 
 const VerifiedAndEmbeddedCatalog: React.FC<{ categoryId: string }> = ({ categoryId }) => {
+  const { catalogTracksByCategory, playTrack, showToast } = useAutoMusic();
   const supported = categoryId !== 'kuran' && categoryId !== 'custom';
-  const [artists,setArtists] = useState<string[]>([]);
-  const [artist,setArtist] = useState('');
-  const [albums,setAlbums] = useState<Array<{id:string;title:string;year:string;coverUrl:string;sourceUrl:string}>>([]);
-  const [loading,setLoading] = useState(false);
+  const [artists, setArtists] = useState<string[]>([]);
+  const [artist, setArtist] = useState('');
+  const [albums, setAlbums] = useState<VerifiedAlbum[]>([]);
+  const [loading, setLoading] = useState(false);
   const requestRef = useRef(0);
-  const [albumPage,setAlbumPage] = useState(0);
-  const [notice,setNotice] = useState('');
-  const [videoLink,setVideoLink] = useState('');
-  const [videoId,setVideoId] = useState('');
-  const [videoError,setVideoError] = useState('');
+  const [albumPage, setAlbumPage] = useState(0);
+  const [notice, setNotice] = useState('');
+
+  // Selected album & ordered MusicBrainz tracklist
+  const [selectedAlbum, setSelectedAlbum] = useState<VerifiedAlbum | null>(null);
+  const [albumTracks, setAlbumTracks] = useState<VerifiedAlbumTrack[]>([]);
+  const [loadingTracklist, setLoadingTracklist] = useState(false);
+  const [tracklistNotice, setTracklistNotice] = useState('');
+  const [matchingTrackKey, setMatchingTrackKey] = useState<string | null>(null);
+  const [unmatchedTrackKeys, setUnmatchedTrackKeys] = useState<Record<string, boolean>>({});
+
+  // Embedded YouTube section
+  const [videoLink, setVideoLink] = useState('');
+  const [videoId, setVideoId] = useState('');
+  const [videoError, setVideoError] = useState('');
+
   useEffect(() => {
     requestRef.current += 1;
-    setArtist('');setAlbums([]);setArtists([]);setVideoId('');setVideoLink('');setAlbumPage(0);
+    setArtist('');
+    setAlbums([]);
+    setArtists([]);
+    setSelectedAlbum(null);
+    setAlbumTracks([]);
+    setTracklistNotice('');
+    setUnmatchedTrackKeys({});
+    setVideoId('');
+    setVideoLink('');
+    setAlbumPage(0);
     if (!supported) return;
-    let active=true;
-    fetch('/api/catalog/verified?categoryId='+encodeURIComponent(categoryId))
-      .then(r=>{if(!r.ok)throw Error();return r.json();})
-      .then(d=>{if(active)setArtists(d.artists||[]);})
-      .catch(()=>{if(active)setNotice('Sanatçılar yüklenemedi.');});
-    return ()=>{active=false;};
-  },[categoryId,supported]);
-  const chooseArtist = async (name:string) => {
+    let active = true;
+    openMusicRepository
+      .fetchVerifiedArtistsAndAlbums(categoryId)
+      .then((d) => {
+        if (active) setArtists(d.artists || []);
+      })
+      .catch(() => {
+        if (active) setNotice('Sanatçılar yüklenemedi.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [categoryId, supported]);
+
+  const chooseArtist = async (name: string) => {
     const requestId = ++requestRef.current;
-    setArtist(name);setAlbums([]);setAlbumPage(0);setNotice('');setLoading(true);
+    setArtist(name);
+    setAlbums([]);
+    setSelectedAlbum(null);
+    setAlbumTracks([]);
+    setTracklistNotice('');
+    setUnmatchedTrackKeys({});
+    setAlbumPage(0);
+    setNotice('');
+    setLoading(true);
     try {
-      const res=await fetch('/api/catalog/verified?categoryId='+encodeURIComponent(categoryId)+'&artist='+encodeURIComponent(name));
-      if(!res.ok)throw Error();
-      const data=await res.json();if(requestId!==requestRef.current)return;
-      setAlbums(data.albums||[]);setNotice(data.notice||'');
-    }catch{if(requestId===requestRef.current)setNotice('Albüm bilgileri şu anda yüklenemedi.');}
-    finally{if(requestId===requestRef.current)setLoading(false);}
+      const data = await openMusicRepository.fetchVerifiedArtistsAndAlbums(categoryId, name);
+      if (requestId !== requestRef.current) return;
+      setAlbums(data.albums || []);
+      setNotice(data.notice || '');
+    } catch {
+      if (requestId === requestRef.current) setNotice('Albüm bilgileri şu anda yüklenemedi.');
+    } finally {
+      if (requestId === requestRef.current) setLoading(false);
+    }
   };
+
+  const openAlbumTracklist = async (album: VerifiedAlbum) => {
+    if (selectedAlbum?.id === album.id) {
+      setSelectedAlbum(null);
+      return;
+    }
+    setSelectedAlbum(album);
+    setAlbumTracks([]);
+    setTracklistNotice('');
+    setUnmatchedTrackKeys({});
+    setLoadingTracklist(true);
+    try {
+      const data = await openMusicRepository.fetchAlbumTracklist(album.id);
+      setAlbumTracks(data.tracks || []);
+      if (data.notice) setTracklistNotice(data.notice);
+      else if ((data.tracks || []).length === 0) {
+        setTracklistNotice('Bu albüm için doğrulanmış parça sırası bulunamadı.');
+      }
+    } catch {
+      setTracklistNotice('Albüm parça listesi şu anda yüklenemedi.');
+    } finally {
+      setLoadingTracklist(false);
+    }
+  };
+
+  const matchAndPlayAlbumTrack = async (track: VerifiedAlbumTrack) => {
+    const key = `${selectedAlbum?.id}:${track.disc}:${track.position}`;
+    setMatchingTrackKey(key);
+    try {
+      // 1. Check already loaded local/category catalog first
+      const allLoaded = Object.values(catalogTracksByCategory).flat();
+      let bestLocal: { item: MediaItem; score: number } | null = null;
+      for (const item of allLoaded) {
+        const titleScore = fuzzyMatchScore(track.title, item.title);
+        const artistScore = artist ? fuzzyMatchScore(artist, item.artistName) : 40;
+        if (titleScore >= 55 && artistScore >= 40) {
+          const total = titleScore + artistScore;
+          if (!bestLocal || total > bestLocal.score) {
+            bestLocal = { item, score: total };
+          }
+        }
+      }
+      if (bestLocal) {
+        showToast(`Açık arşiv eşleşmesi bulundu: ${bestLocal.item.title}`);
+        void playTrack(bestLocal.item);
+        return;
+      }
+
+      // 2. Live search across open-licensed audio providers (Archive + Audius + Wikimedia + Jamendo)
+      const query = `${artist} ${track.title}`.trim();
+      const { tracks } = await openMusicRepository.searchTracks(query);
+      let bestOnline: { item: MediaItem; score: number } | null = null;
+      for (const item of tracks) {
+        const titleScore = fuzzyMatchScore(track.title, item.title);
+        const artistScore = artist ? fuzzyMatchScore(artist, `${item.artistName} ${item.title}`) : 40;
+        if (titleScore >= 42 && artistScore >= 35) {
+          const total = titleScore + artistScore;
+          if (!bestOnline || total > bestOnline.score) {
+            bestOnline = { item, score: total };
+          }
+        }
+      }
+
+      if (bestOnline) {
+        showToast(`Açık kaynak eşleşmesi oynatılıyor: ${bestOnline.item.title}`);
+        void playTrack(bestOnline.item);
+      } else {
+        setUnmatchedTrackKeys((prev) => ({ ...prev, [key]: true }));
+        showToast('Bu parça için ücretsiz ve izinli ses kaynağı bulunamadı.');
+      }
+    } finally {
+      setMatchingTrackKey(null);
+    }
+  };
+
   const playVideo = () => {
     try {
-      const url=new URL(videoLink.trim());
-      const host=url.hostname.toLowerCase();
-      let id='';
-      if(['youtu.be','www.youtu.be'].includes(host))id=url.pathname.split('/')[1]||'';
-      else if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(host))
-        id=url.pathname==='/watch'?(url.searchParams.get('v')||''):url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1]||'';
-      if(!/^[A-Za-z0-9_-]{11}$/.test(id))throw Error();
-      setVideoId(id);setVideoError('');
-    }catch{setVideoError('Geçerli bir YouTube video bağlantısı girin.');}
+      const url = new URL(videoLink.trim());
+      const host = url.hostname.toLowerCase();
+      let id = '';
+      if (['youtu.be', 'www.youtu.be'].includes(host)) id = url.pathname.split('/')[1] || '';
+      else if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'].includes(host))
+        id =
+          url.pathname === '/watch'
+            ? url.searchParams.get('v') || ''
+            : url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1] || '';
+      if (!/^[A-Za-z0-9_-]{11}$/.test(id)) throw Error();
+      setVideoId(id);
+      setVideoError('');
+    } catch {
+      setVideoError('Geçerli bir YouTube video bağlantısı girin.');
+    }
   };
-  return <div className="space-y-4">
-    {supported && <section className="p-4 rounded-2xl border border-[#D4AF37]/20 bg-[#121216] space-y-3">
-      <h2 className="text-base font-semibold text-[#F5F2EB]">Gerçek sanatçılar ve albümleri</h2>
-      <p className="text-xs text-[#9B978E]">MusicBrainz albüm verileri; bunlar çalınabilir kayıt değildir.</p>
-      <div className="flex flex-wrap gap-2">{artists.map(name=><button type="button" key={name} onClick={()=>void chooseArtist(name)}
-        className={`px-3 py-2 rounded-lg text-xs border ${artist===name?'bg-[#D4AF37] text-black border-[#D4AF37]':'border-white/15 text-[#F5F2EB]'}`}>{name}</button>)}</div>
-      {loading && <p className="text-xs text-[#D4AF37]">Albümler yükleniyor…</p>}
-      {notice && <p className="text-xs text-[#9B978E]">{notice}</p>}
-      <p className="text-xs text-[#D4AF37]">{artist ? `${albums.length} albüm bulundu` : `${artists.length} sanatçı`}</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">{albums.slice(0,(albumPage+1)*20).map(a=><div key={a.id} className="rounded-xl overflow-hidden border border-white/10">
-        <AlbumCover imageUrl={a.coverUrl} title={a.title} />
-        <div className="p-2"><p className="text-xs text-[#F5F2EB] line-clamp-2">{a.title}</p><p className="text-[11px] text-[#9B978E]">{a.year||'Yıl bilinmiyor'}</p></div>
-      </div>)}</div>
-      {albums.length>(albumPage+1)*20 && <button type="button" onClick={()=>setAlbumPage(p=>p+1)} className="rounded-lg border border-[#D4AF37]/40 px-4 py-2 text-xs text-[#D4AF37]">Daha fazla albüm göster</button>}
-    </section>}
-    <section className="p-4 rounded-2xl border border-white/10 bg-[#121216] space-y-3">
-      <h2 className="text-base font-semibold text-[#F5F2EB]">Uygulama içinde YouTube oynat</h2>
-      <p className="text-xs text-[#9B978E]">Resmî video bağlantısını yapıştırın. Gömülmeye izin verilen videolar burada açılır; oynatıcı görünür kalmalıdır.</p>
-      <form className="flex flex-col sm:flex-row gap-2" onSubmit={e=>{e.preventDefault();playVideo();}}>
-        <input type="url" value={videoLink} onChange={e=>setVideoLink(e.target.value)} aria-label="YouTube video bağlantısı" placeholder="YouTube video bağlantısı" className="flex-1 min-w-0 rounded-lg bg-black/30 border border-white/15 px-3 py-2 text-sm text-white" />
-        <button type="submit" className="rounded-lg bg-[#D4AF37] text-black font-semibold text-sm px-4 py-2">Uygulamada oynat</button>
-      </form>
-      {videoError && <p role="alert" className="text-xs text-amber-400">{videoError}</p>}
-      {videoId && <div className="aspect-video w-full bg-black rounded-xl overflow-hidden"><iframe key={videoId} title="YouTube oynatıcı" src={`https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1`} className="w-full h-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /></div>}
-    </section>
-  </div>;
+
+  return (
+    <div className="space-y-4">
+      {supported && (
+        <section className="p-4 sm:p-5 rounded-2xl border border-[#D4AF37]/20 bg-[#121216] space-y-3.5">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-[#F5F2EB]">Gerçek Sanatçılar ve Albüm Diskografisi</h2>
+            <p className="text-xs text-[#9B978E]">
+              Sanatçı seçin, albüme tıklayarak gerçek parça sırasını görüntüleyin ve ücretsiz izinli ses kaynağı eşleştirmesi yapın.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {artists.map((name) => (
+              <button
+                type="button"
+                key={name}
+                onClick={() => void chooseArtist(name)}
+                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                  artist === name
+                    ? 'bg-[#D4AF37] text-[#09090B] border-[#D4AF37]'
+                    : 'border-white/15 text-[#F5F2EB] hover:border-[#D4AF37]/40'
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+
+          {loading && (
+            <p className="text-xs text-[#D4AF37] inline-flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Albümler yükleniyor…
+            </p>
+          )}
+          {notice && <p className="text-xs text-[#9B978E]">{notice}</p>}
+          <p className="text-xs text-[#D4AF37]">
+            {artist ? `${artist} · ${albums.length} albüm bulundu` : `${artists.length} doğrulanmış sanatçı`}
+          </p>
+
+          {albums.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {albums.slice(0, (albumPage + 1) * 15).map((a) => {
+                const isSelected = selectedAlbum?.id === a.id;
+                return (
+                  <button
+                    type="button"
+                    key={a.id}
+                    onClick={() => void openAlbumTracklist(a)}
+                    className={`group text-left rounded-xl overflow-hidden border transition-colors ${
+                      isSelected
+                        ? 'border-[#D4AF37] bg-[#1B1810]'
+                        : 'border-white/10 hover:border-[#D4AF37]/40 bg-[#0E0E12]'
+                    }`}
+                  >
+                    <AlbumCover imageUrl={a.coverUrl} title={a.title} categoryId={categoryId} />
+                    <div className="p-2.5">
+                      <p className="text-xs font-medium text-[#F5F2EB] line-clamp-2">{a.title}</p>
+                      <p className="text-[11px] font-mono tabular-nums text-[#9B978E] mt-0.5">
+                        {a.year || 'Yıl bilinmiyor'}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {albums.length > (albumPage + 1) * 15 && (
+            <button
+              type="button"
+              onClick={() => setAlbumPage((p) => p + 1)}
+              className="rounded-lg border border-[#D4AF37]/40 px-4 py-2 text-xs text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors"
+            >
+              Daha fazla albüm göster ({albums.length - (albumPage + 1) * 15} kaldı)
+            </button>
+          )}
+
+          {/* Selected Album Ordered Tracklist Drawer */}
+          {selectedAlbum && (
+            <div className="mt-4 p-4 rounded-2xl bg-[#0D0D11] border border-[#D4AF37]/30 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-white/10">
+                    <AlbumCover imageUrl={selectedAlbum.coverUrl} title={selectedAlbum.title} categoryId={categoryId} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[#D4AF37] font-medium">
+                      MusicBrainz Albüm Parça Listesi · {selectedAlbum.year || 'Yıl bilinmiyor'}
+                    </p>
+                    <h3 className="text-sm sm:text-base font-bold text-[#F5F2EB] truncate">
+                      {selectedAlbum.title}
+                    </h3>
+                    <p className="text-xs text-[#9B978E] truncate">{artist}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAlbum(null)}
+                  aria-label="Albüm listesini kapat"
+                  className="w-8 h-8 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] flex items-center justify-center text-[#A19E95] shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {loadingTracklist ? (
+                <div className="py-4 flex items-center gap-2 text-xs text-[#D4AF37]">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Albüm parça sırası yükleniyor...
+                </div>
+              ) : albumTracks.length === 0 ? (
+                <p className="text-xs text-[#9B978E]">
+                  {tracklistNotice || 'Bu albüm için parça listesi bulunamadı.'}
+                </p>
+              ) : (
+                <div className="divide-y divide-white/[0.06]">
+                  {albumTracks.map((tr) => {
+                    const key = `${selectedAlbum.id}:${tr.disc}:${tr.position}`;
+                    const isMatching = matchingTrackKey === key;
+                    const isUnmatched = Boolean(unmatchedTrackKeys[key]);
+                    return (
+                      <div key={key} className="py-2.5 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="w-6 text-right text-xs font-mono tabular-nums text-[#7C7970] shrink-0">
+                            {String(tr.position).padStart(2, '0')}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm text-[#F5F2EB] truncate">{tr.title}</p>
+                            {isUnmatched && (
+                              <p className="text-[11px] text-amber-300/85">
+                                Ücretsiz izinli ses kaynağı bulunamadı
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          {tr.durationSec > 0 && (
+                            <span className="hidden sm:inline text-xs font-mono tabular-nums text-[#8C887F]">
+                              {formatDuration(tr.durationSec)}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            disabled={isMatching}
+                            onClick={() => void matchAndPlayAlbumTrack(tr)}
+                            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#1A1812] hover:bg-[#D4AF37] text-[#D4AF37] hover:text-[#09090B] border border-[#D4AF37]/30 text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
+                          >
+                            {isMatching ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Play className="w-3 h-3 fill-current" />
+                            )}
+                            {isUnmatched ? 'Tekrar Ara' : 'Açık Kaynakta Ara'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="p-4 rounded-2xl border border-white/10 bg-[#121216] space-y-3">
+        <h2 className="text-base font-semibold text-[#F5F2EB]">Uygulama içinde YouTube oynat</h2>
+        <p className="text-xs text-[#9B978E]">
+          Resmî video bağlantısını yapıştırın. Gömülmeye izin verilen videolar burada açılır; oynatıcı görünür kalmalıdır.
+        </p>
+        <form
+          className="flex flex-col sm:flex-row gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            playVideo();
+          }}
+        >
+          <input
+            type="url"
+            value={videoLink}
+            onChange={(e) => setVideoLink(e.target.value)}
+            aria-label="YouTube video bağlantısı"
+            placeholder="YouTube video bağlantısı"
+            className="flex-1 min-w-0 rounded-lg bg-black/30 border border-white/15 px-3 py-2 text-sm text-white"
+          />
+          <button type="submit" className="rounded-lg bg-[#D4AF37] text-black font-semibold text-sm px-4 py-2">
+            Uygulamada oynat
+          </button>
+        </form>
+        {videoError && (
+          <p role="alert" className="text-xs text-amber-400">
+            {videoError}
+          </p>
+        )}
+        {videoId && (
+          <div className="aspect-video w-full bg-black rounded-xl overflow-hidden">
+            <iframe
+              key={videoId}
+              title="YouTube oynatıcı"
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1`}
+              className="w-full h-full border-0"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          </div>
+        )}
+      </section>
+    </div>
+  );
 };
 
 export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> = ({ categoryId, title }) => {
@@ -573,6 +904,7 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
   const [artistFilter, setArtistFilter] = useState('all');
   const [formatFilter, setFormatFilter] = useState('all');
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(25);
 
   const category = categories.find((c) => c.id === categoryId);
   const allTracks = categoryId ? catalogTracksByCategory[categoryId] ?? [] : [];
@@ -585,6 +917,7 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
     setArtistFilter('all');
     setFormatFilter('all');
     setFilterText('');
+    setVisibleCount(25);
     if (categoryId && (!curatedPlaylistsByCategory[categoryId] || allTracks.length === 0)) {
       void loadCategoryTracks(categoryId, false);
     }
@@ -830,10 +1163,23 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
           </button>
         </div>
       ) : (
-        <div className="bg-[#121216] border border-white/[0.06] rounded-2xl p-2">
-          {filteredTracks.map((item, idx) => (
-            <TrackRow key={item.contentId} item={item} index={idx} queueContext={filteredTracks} />
-          ))}
+        <div className="space-y-3">
+          <div className="bg-[#121216] border border-white/[0.06] rounded-2xl p-2">
+            {filteredTracks.slice(0, visibleCount).map((item, idx) => (
+              <TrackRow key={item.contentId} item={item} index={idx} queueContext={filteredTracks} />
+            ))}
+          </div>
+          {filteredTracks.length > visibleCount && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 25)}
+                className="h-10 px-5 rounded-xl bg-[#141418] hover:bg-[#1C1C22] border border-[#D4AF37]/30 text-xs font-medium text-[#D4AF37] transition-colors"
+              >
+                Daha Fazla Göster ({filteredTracks.length - visibleCount} kayıt kaldı)
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

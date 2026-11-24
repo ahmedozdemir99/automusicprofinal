@@ -17,6 +17,7 @@ import { NowPlayingView } from './components/NowPlayingView';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PlayerBar } from './components/PlayerBar';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { PWAUpdateBanner } from './components/PWAUpdateBanner';
 import { AutoMusicProvider, useAutoMusic } from './context/AutoMusicContext';
 import {
   ArtistDetailScreen,
@@ -197,7 +198,7 @@ const AppShell: React.FC = () => {
             className="w-full h-11 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
             <Car className="w-4 h-4 shrink-0" />
-            Araba Modu
+            Araç Modu
           </button>
         </div>
       </aside>
@@ -223,7 +224,7 @@ const AppShell: React.FC = () => {
               className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold whitespace-nowrap shrink-0 transition-colors"
             >
               <Car className="w-3.5 h-3.5 shrink-0" />
-              Araba Modu
+              Araç Modu
             </button>
           </div>
         </header>
@@ -263,8 +264,11 @@ const AppShell: React.FC = () => {
         })}
       </nav>
 
-      {/* Android Auto Full-Screen Car Mode */}
+      {/* Full-Screen Car Mode */}
       {carMode && <AndroidAutoMode />}
+
+      {/* Safe PWA Update Prompt */}
+      <PWAUpdateBanner />
 
       {/* Offline Connectivity Indicator */}
       <OfflineIndicator />

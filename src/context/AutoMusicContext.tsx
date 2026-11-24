@@ -9,7 +9,11 @@ import {
   healMediaItem,
   normalizeMotif,
 } from '../data/quranData';
-import { EQ_PRESETS, sharedAudioEngine } from '../services/audioEngine';
+import {
+  EQ_PRESETS,
+  normalizeEqualizerSettings,
+  sharedAudioEngine,
+} from '../services/audioEngine';
 import {
   DbCategoriesPayload,
   fetchCatalogProviderStatus,
@@ -30,6 +34,7 @@ import {
   AppScreen,
   CatalogProviderStatus,
   CuratedPlaylist,
+  CustomEqProfile,
   DownloadProgress,
   DownloadRecord,
   DownloadSettings,
@@ -40,6 +45,7 @@ import {
   PlaybackResumePoint,
   Playlist,
   RepeatMode,
+  SleepTimerMode,
 } from '../types/media';
 
 const STORAGE_KEYS = {
@@ -55,6 +61,8 @@ const STORAGE_KEYS = {
   EQ_SETTINGS: 'amp_eq_settings_v1',
   SELECTED_RECITER: 'amp_reciter_v1',
   LOADED_CATALOG: 'amp_catalog_tracks_v2',
+  PLAY_COUNTS: 'amp_play_counts_v1',
+  SEARCH_HISTORY: 'amp_search_history_v1',
 };
 
 const DEFAULT_DOWNLOAD_SETTINGS: DownloadSettings = {
@@ -68,13 +76,17 @@ const DEFAULT_DOWNLOAD_SETTINGS: DownloadSettings = {
   minFreeSpaceGb: 2,
 };
 
-const DEFAULT_EQ_SETTINGS: EqualizerSettings = {
+const DEFAULT_EQ_SETTINGS: EqualizerSettings = normalizeEqualizerSettings({
   enabled: true,
   preset: 'car',
   bandsDb: [...EQ_PRESETS.car.bandsDb],
+  preampDb: EQ_PRESETS.car.preampDb,
   bassBoostDb: EQ_PRESETS.car.bassBoostDb,
   trebleBoostDb: EQ_PRESETS.car.trebleBoostDb,
-};
+  volumeLeveler: true,
+  crossfadeSec: 0,
+  customProfiles: [],
+});
 
 const DEFAULT_PLAYLISTS: Playlist[] = [
   {
@@ -112,6 +124,20 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
+function mergeDefaultAndSavedCategories(saved: MusicCategory[]): MusicCategory[] {
+  const map = new Map<string, MusicCategory>();
+  for (const def of DEFAULT_CATEGORIES) {
+    map.set(def.id, def);
+  }
+  for (const cat of saved) {
+    if (!cat?.id) continue;
+    if (cat.isCustom || !map.has(cat.id)) {
+      map.set(cat.id, { ...cat, motif: normalizeMotif(cat.motif as unknown as string) });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.order - b.order);
+}
+
 interface AutoMusicContextValue {
   // Navigation & Car Mode
   screen: AppScreen;
@@ -137,7 +163,7 @@ interface AutoMusicContextValue {
   selectedReciterId: string;
   setSelectedReciterId: (id: string) => void;
 
-  // Playback
+  // Playback & Queue
   queue: MediaItem[];
   currentIndex: number;
   currentTrack: MediaItem | null;
@@ -156,11 +182,21 @@ interface AutoMusicContextValue {
   nextTrack: () => Promise<void>;
   prevTrack: () => Promise<void>;
   seekTo: (sec: number) => void;
+  seekBy: (deltaSec: number) => void;
   setVolume: (v: number) => void;
   toggleShuffle: () => void;
   cycleRepeatMode: () => void;
+  jumpToQueueIndex: (idx: number) => Promise<void>;
+  removeFromQueue: (idx: number) => void;
+  moveQueueItem: (fromIdx: number, toIdx: number) => void;
+  addToQueueNext: (item: MediaItem) => void;
 
-  // Favorites, Playlists, Recent, Resume
+  // Sleep Timer
+  sleepTimerMode: SleepTimerMode;
+  sleepTimerRemainingSec: number | null;
+  setSleepTimer: (mode: SleepTimerMode) => void;
+
+  // Favorites, Playlists, Recent, Most Played, Resume, Search History
   favoriteTracks: MediaItem[];
   favoriteArtistIds: string[];
   favoriteSurahNumbers: number[];
@@ -186,7 +222,11 @@ interface AutoMusicContextValue {
   moveTrackInPlaylist: (playlistId: string, fromIndex: number, toIndex: number) => void;
 
   recentlyPlayed: MediaItem[];
+  playCounts: Record<string, number>;
   resumePoints: Record<string, PlaybackResumePoint>;
+  searchHistory: string[];
+  addSearchHistory: (term: string) => void;
+  clearSearchHistory: () => void;
 
   // Smart One-Time Download & Storage
   downloadSettings: DownloadSettings;
@@ -200,12 +240,19 @@ interface AutoMusicContextValue {
   clearAllDownloads: () => Promise<void>;
   refreshStorageStats: () => Promise<void>;
 
-  // Equalizer
+  // Equalizer (10-Band DSP + Custom Profiles)
   eqSettings: EqualizerSettings;
   isEqSupported: boolean;
   updateEqSettings: (patch: Partial<EqualizerSettings>) => void;
   applyEqPreset: (preset: EqPresetId) => void;
   setEqBand: (index: number, db: number) => void;
+  saveCustomEqProfile: (name: string) => void;
+  deleteCustomEqProfile: (id: string) => void;
+  applyCustomEqProfile: (id: string) => void;
+
+  // Backup & Restore
+  exportUserBackupJson: () => string;
+  importUserBackupJson: (jsonText: string) => { ok: boolean; message: string };
 
   // Toast Notification
   toastMessage: string | null;
@@ -220,19 +267,18 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const [screenHistory, setScreenHistory] = useState<AppScreen[]>([]);
   const [carMode, setCarMode] = useState(false);
 
-  // Categories & Database Catalog
+  // Categories & Database Catalog (always ensures all 18 defaults including Fantezi are present)
   const [categories, setCategories] = useState<MusicCategory[]>(() => {
     const saved = readJson<MusicCategory[]>(STORAGE_KEYS.CATEGORIES, []);
-    if (saved.length >= 17) {
-      return saved.map((c) => ({ ...c, motif: normalizeMotif(c.motif as unknown as string) }));
-    }
-    return DEFAULT_CATEGORIES;
+    return mergeDefaultAndSavedCategories(saved);
   });
 
   const [providerStatus, setProviderStatus] = useState<CatalogProviderStatus>({
     databaseConnected: true,
     quranApiConnected: true,
     internetArchiveConnected: true,
+    audiusConnected: true,
+    wikimediaConnected: true,
     jamendoConfigured: false,
     localArchiveReady: true,
   });
@@ -241,7 +287,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     const raw = readJson<Record<string, MediaItem[]>>(STORAGE_KEYS.LOADED_CATALOG, {});
     const healed: Record<string, MediaItem[]> = {};
     for (const [k, list] of Object.entries(raw)) {
-      healed[k] = list.map(healMediaItem);
+      if (Array.isArray(list)) healed[k] = list.map(healMediaItem);
     }
     return healed;
   });
@@ -271,7 +317,11 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [playbackError, setPlaybackError] = useState<string | null>(null);
 
-  // Favorites, Playlists, Recent, Resume (auto-healed from stale URLs/motifs)
+  // Sleep Timer
+  const [sleepTimerMode, setSleepTimerMode] = useState<SleepTimerMode>('off');
+  const [sleepTimerRemainingSec, setSleepTimerRemainingSec] = useState<number | null>(null);
+
+  // Favorites, Playlists, Recent, Most Played, Resume, Search History
   const [favoriteTracks, setFavoriteTracks] = useState<MediaItem[]>(() =>
     readJson<MediaItem[]>(STORAGE_KEYS.FAVORITE_TRACKS, []).map(healMediaItem)
   );
@@ -287,14 +337,20 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const [playlists, setPlaylists] = useState<Playlist[]>(() =>
     readJson<Playlist[]>(STORAGE_KEYS.PLAYLISTS, DEFAULT_PLAYLISTS).map((pl) => ({
       ...pl,
-      items: pl.items.map(healMediaItem),
+      items: (pl.items ?? []).map(healMediaItem),
     }))
   );
   const [recentlyPlayed, setRecentlyPlayed] = useState<MediaItem[]>(() =>
     readJson<MediaItem[]>(STORAGE_KEYS.RECENTLY_PLAYED, []).map(healMediaItem)
   );
+  const [playCounts, setPlayCounts] = useState<Record<string, number>>(() =>
+    readJson<Record<string, number>>(STORAGE_KEYS.PLAY_COUNTS, {})
+  );
   const [resumePoints, setResumePoints] = useState<Record<string, PlaybackResumePoint>>(() =>
     readJson<Record<string, PlaybackResumePoint>>(STORAGE_KEYS.RESUME_POINTS, {})
+  );
+  const [searchHistory, setSearchHistory] = useState<string[]>(() =>
+    readJson<string[]>(STORAGE_KEYS.SEARCH_HISTORY, [])
   );
 
   // Downloads & Storage
@@ -311,27 +367,34 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     isBelowTwoGbThreshold: false,
   });
 
-  // Equalizer
+  // Equalizer (auto-migrates older 5-band saved configs to 10-band cleanly)
   const [eqSettings, setEqSettings] = useState<EqualizerSettings>(() =>
-    readJson<EqualizerSettings>(STORAGE_KEYS.EQ_SETTINGS, DEFAULT_EQ_SETTINGS)
+    normalizeEqualizerSettings(readJson<Partial<EqualizerSettings>>(STORAGE_KEYS.EQ_SETTINGS, DEFAULT_EQ_SETTINGS))
   );
 
-  // Toast
+  // Toast & internal refs
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const activeObjectUrlRef = useRef<string | null>(null);
   const activeDownloadIdsRef = useRef<Set<string>>(new Set());
   const playRequestSeqRef = useRef<number>(0);
+  // Circuit breaker: remembers dead URLs for 10 minutes so we don't retry broken links endlessly
+  const failedUrlsRef = useRef<Map<string, number>>(new Map());
+  const sleepTimerModeRef = useRef<SleepTimerMode>('off');
+  const volumeRef = useRef<number>(0.9);
+
+  useEffect(() => { sleepTimerModeRef.current = sleepTimerMode; }, [sleepTimerMode]);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 3200);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 3400);
   }, []);
 
-  // Persist user data
+  // Persist user data safely
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.FAVORITE_TRACKS, JSON.stringify(favoriteTracks)); }, [favoriteTracks]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.FAVORITE_ARTISTS, JSON.stringify(favoriteArtistIds)); }, [favoriteArtistIds]);
@@ -339,13 +402,21 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.FAVORITE_RECITERS, JSON.stringify(favoriteReciterIds)); }, [favoriteReciterIds]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.PLAYLISTS, JSON.stringify(playlists)); }, [playlists]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.RECENTLY_PLAYED, JSON.stringify(recentlyPlayed)); }, [recentlyPlayed]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.PLAY_COUNTS, JSON.stringify(playCounts)); }, [playCounts]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.RESUME_POINTS, JSON.stringify(resumePoints)); }, [resumePoints]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.DOWNLOAD_SETTINGS, JSON.stringify(downloadSettings)); }, [downloadSettings]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.EQ_SETTINGS, JSON.stringify(eqSettings)); }, [eqSettings]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.SELECTED_RECITER, JSON.stringify(selectedReciterId)); }, [selectedReciterId]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.LOADED_CATALOG, JSON.stringify(catalogTracksByCategory)); }, [catalogTracksByCategory]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(searchHistory)); }, [searchHistory]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LOADED_CATALOG, JSON.stringify(catalogTracksByCategory));
+    } catch {
+      // Ignore quota exceeded on catalog cache
+    }
+  }, [catalogTracksByCategory]);
 
-  // Initial load: Provider status + SQLite DB Categories & Curated Playlists + IndexedDB offline archive records
+  // Initial load: Provider status + DB Categories & Curated Playlists + IndexedDB offline archive records
   const refreshStorageStats = useCallback(async () => {
     try {
       const records = await listOfflineRecords();
@@ -353,7 +424,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       const est = await getStorageEstimate(records, downloadSettings.minFreeSpaceGb);
       setStorageEstimate(est);
     } catch {
-      // IndexedDB unavailable in private sandbox
+      // IndexedDB unavailable
     }
   }, [downloadSettings.minFreeSpaceGb]);
 
@@ -364,7 +435,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     openMusicRepository.fetchCategoriesAndPlaylists().then((payload) => {
       if (!payload) return;
       if (payload.categories.length >= 17) {
-        setCategories(payload.categories);
+        setCategories((prev) => mergeDefaultAndSavedCategories([...payload.categories, ...prev.filter((c) => c.isCustom)]));
       }
       setFeaturedPlaylistsSummary(payload.playlistsSummary);
     });
@@ -387,10 +458,62 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     });
   }, [refreshStorageStats]);
 
-  // Apply EQ settings whenever changed
+  // Apply EQ settings whenever changed (also lazily engages Web Audio if user adjusts EQ while playing)
   useEffect(() => {
     sharedAudioEngine.applyEqualizer(eqSettings);
-  }, [eqSettings]);
+    if (eqSettings.enabled && isPlaying && sharedAudioEngine.element.src) {
+      void sharedAudioEngine.resumeContext(sharedAudioEngine.element.src).then((ok) => {
+        if (ok) sharedAudioEngine.applyEqualizer(eqSettings);
+      });
+    }
+  }, [eqSettings, isPlaying]);
+
+  // Sleep Timer countdown interval
+  useEffect(() => {
+    if (sleepTimerMode === 'off' || sleepTimerMode === 'end_of_track') {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setSleepTimerRemainingSec((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          // Smooth 1.2s fade-out before pausing
+          const audioEl = sharedAudioEngine.element;
+          sharedAudioEngine.fadeVolume(audioEl.volume, 0, 1200);
+          window.setTimeout(() => {
+            audioEl.pause();
+            sharedAudioEngine.setVolume(volumeRef.current);
+            setIsPlaying(false);
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+            showToast('Uyku zamanlayıcısı tamamlandı. Oynatma duraklatıldı.');
+          }, 1250);
+          setSleepTimerMode('off');
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [sleepTimerMode, showToast]);
+
+  const setSleepTimer = useCallback(
+    (mode: SleepTimerMode) => {
+      setSleepTimerMode(mode);
+      if (mode === 'off') {
+        setSleepTimerRemainingSec(null);
+        showToast('Uyku zamanlayıcısı kapatıldı.');
+      } else if (mode === 'end_of_track') {
+        setSleepTimerRemainingSec(null);
+        showToast('Uyku zamanlayıcısı: Mevcut parça bitince duracak.');
+      } else {
+        const mins = Number.parseInt(mode, 10);
+        setSleepTimerRemainingSec(mins * 60);
+        showToast(`Uyku zamanlayıcısı ${mins} dakika olarak ayarlandı.`);
+      }
+    },
+    [showToast]
+  );
 
   // Navigation helpers
   const navigate = useCallback((next: AppScreen) => {
@@ -414,7 +537,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Category creation (extensible + persisted in SQLite)
+  // Category creation (extensible + persisted in DB & localStorage)
   const addCategory = useCallback(
     (name: string, subtitle: string, language: string, genre: string) => {
       const trimmed = name.trim();
@@ -422,7 +545,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       void openMusicRepository.createCategory(trimmed, subtitle, language, genre).then((dbCat) => {
         if (dbCat) {
           setCategories((prev) => [...prev.filter((c) => c.id !== dbCat.id), dbCat]);
-          showToast(`"${dbCat.name}" kategorisi veritabanına eklendi.`);
+          showToast(`"${dbCat.name}" kategorisi eklendi.`);
         } else {
           const id = `custom_${trimmed.toLowerCase().replace(/[^a-z0-9ğüşöçı]+/gi, '_')}_${Date.now().toString(36)}`;
           setCategories((prev) => [
@@ -447,7 +570,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     [showToast]
   );
 
-  // Load Spotify-style curated playlists & real tracks from SQLite DB + local phone files
+  // Load curated playlists & real tracks from DB + local phone files
   const loadCategoryTracks = useCallback(
     async (categoryId: string, forceRefresh = false): Promise<MediaItem[]> => {
       const category = categories.find((c) => c.id === categoryId);
@@ -699,7 +822,8 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Resilient Real Audio Playback Core (Offline First -> Primary Proxy -> Fallback Mirror Proxy)
+  // Resilient Real Audio Playback Core
+  // Offline First -> Primary Proxy -> Fallback Mirror Proxy -> Alternative Provider Auto-Search -> Clear Real Error Cause
   const loadAndPlayItem = useCallback(
     async (rawItem: MediaItem, startFromZero = false) => {
       const item = healMediaItem(rawItem);
@@ -707,8 +831,6 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
       setPlaybackError(null);
       setIsBuffering(true);
-      await sharedAudioEngine.resumeContext();
-      sharedAudioEngine.applyEqualizer(eqSettings);
 
       const audioEl = sharedAudioEngine.element;
 
@@ -717,10 +839,29 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         activeObjectUrlRef.current = null;
       }
 
-      const tryPlaySource = async (srcUrl: string) => {
+      const isCircuitBroken = (url: string): boolean => {
+        const failedAt = failedUrlsRef.current.get(url);
+        if (!failedAt) return false;
+        if (Date.now() - failedAt > 10 * 60 * 1000) {
+          failedUrlsRef.current.delete(url);
+          return false;
+        }
+        return true;
+      };
+
+      const tryPlaySource = async (srcUrl: string): Promise<void> => {
         audioEl.pause();
+        sharedAudioEngine.prepareForSource(srcUrl);
         audioEl.src = srcUrl;
         audioEl.load();
+
+        // Engage 10-band Web Audio DSP safely ONLY for CORS-safe URLs when EQ is enabled
+        if (eqSettings.enabled && sharedAudioEngine.isCorsSafeUrl(srcUrl)) {
+          const dspReady = await sharedAudioEngine.resumeContext(srcUrl);
+          if (dspReady) {
+            sharedAudioEngine.applyEqualizer(eqSettings);
+          }
+        }
 
         const savedResume = resumePoints[item.contentId];
         if (!startFromZero && savedResume && savedResume.positionSec > 5) {
@@ -733,7 +874,50 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
           audioEl.addEventListener('loadedmetadata', onLoaded);
         }
 
-        await audioEl.play();
+        // Crossfade fade-in (strictly disabled for Kur'an-ı Kerim)
+        const crossfadeMs =
+          item.categoryId !== 'kuran' && (eqSettings.crossfadeSec ?? 0) > 0
+            ? Math.round((eqSettings.crossfadeSec ?? 0) * 1000)
+            : 0;
+        if (crossfadeMs > 0) {
+          audioEl.volume = 0.05;
+        } else {
+          audioEl.volume = volumeRef.current;
+        }
+
+        // 12-second playback start timeout so stalled servers never hang UI
+        let timeoutId: number | null = null;
+        try {
+          await Promise.race([
+            audioEl.play(),
+            new Promise<never>((_, reject) => {
+              timeoutId = window.setTimeout(() => {
+                reject(new Error('PLAYBACK_TIMEOUT'));
+              }, 12000);
+            }),
+          ]);
+        } finally {
+          if (timeoutId !== null) window.clearTimeout(timeoutId);
+        }
+
+        if (crossfadeMs > 0) {
+          sharedAudioEngine.fadeVolume(0.05, volumeRef.current, Math.min(crossfadeMs, 3500));
+        }
+      };
+
+      const diagnoseProxyFailure = async (proxiedUrl: string): Promise<string | null> => {
+        if (!proxiedUrl.startsWith('/api/audio/proxy')) return null;
+        try {
+          const probe = await fetch(proxiedUrl, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
+          if (probe.ok || probe.status === 206) return null;
+          if (probe.status === 403) return 'Ses kaynağı erişimi kısıtladı (HTTP 403).';
+          if (probe.status === 404) return 'Ses dosyası kaynak sunucuda bulunamadı (HTTP 404).';
+          if (probe.status === 429) return 'Sağlayıcı istek sınırına ulaştı (HTTP 429). Kısa süre sonra deneyin.';
+          if (probe.status === 504) return 'Ses kaynağı yanıt vermedi (zaman aşımı).';
+          return `Ses akışı sunucudan alınamadı (HTTP ${probe.status}).`;
+        } catch {
+          return null;
+        }
       };
 
       try {
@@ -741,6 +925,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         if (seq !== playRequestSeqRef.current) return;
 
         let playingOffline = false;
+        let diagnosedReason: string | null = null;
 
         if (offlineBlob) {
           const blobUrl = URL.createObjectURL(offlineBlob);
@@ -752,27 +937,69 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
           setIsPlayingOfflineFile(false);
           const fallbackUrl = getFallbackStreamUrl(item);
           const isQuran = item.categoryId === 'kuran' || item.sourceProvider === 'mp3quran';
-          const sources = [
-            getProxiedAudioUrl(item.streamUrl),
-            ...(isQuran ? [item.streamUrl] : []),
-            ...(fallbackUrl ? [getProxiedAudioUrl(fallbackUrl), fallbackUrl] : []),
-          ];
+          const primaryProxy = getProxiedAudioUrl(item.streamUrl);
+          const candidateSources = [
+            primaryProxy,
+            ...(isQuran && !sharedAudioEngine.isDspActive ? [item.streamUrl] : []),
+            ...(fallbackUrl ? [getProxiedAudioUrl(fallbackUrl)] : []),
+            ...(fallbackUrl && !sharedAudioEngine.isDspActive ? [fallbackUrl] : []),
+          ].filter((u, idx, arr) => arr.indexOf(u) === idx);
+
+          // Skip circuit-broken URLs unless all are broken (then try primary once)
+          const viableSources = candidateSources.filter((u) => !isCircuitBroken(u));
+          const sourcesToTry = viableSources.length > 0 ? viableSources : [primaryProxy];
+
           let lastError: unknown;
           let succeeded = false;
-          for (const source of [...new Set(sources)]) {
+
+          for (const source of sourcesToTry) {
             if (seq !== playRequestSeqRef.current) return;
             try {
               await tryPlaySource(source);
+              failedUrlsRef.current.delete(source);
               succeeded = true;
               break;
             } catch (error) {
               lastError = error;
-              if (error instanceof Error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) throw error;
+              if (error instanceof Error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
+                throw error;
+              }
+              failedUrlsRef.current.set(source, Date.now());
             }
           }
-          if (!succeeded) throw lastError ?? new Error('Ses kaynağına ulaşılamadı.');
+
+          // Automatic alternative provider search if primary music stream failed
+          if (!succeeded && !isQuran && !item.isLocalFile && navigator.onLine) {
+            try {
+              const altQuery = `${item.artistName} ${item.title}`.trim();
+              const altRes = await openMusicRepository.searchTracks(altQuery);
+              const altTrack = altRes.tracks.find(
+                (t) =>
+                  t.streamUrl &&
+                  t.streamUrl !== item.streamUrl &&
+                  !isCircuitBroken(getProxiedAudioUrl(t.streamUrl))
+              );
+              if (altTrack && seq === playRequestSeqRef.current) {
+                const altProxy = getProxiedAudioUrl(altTrack.streamUrl);
+                try {
+                  await tryPlaySource(altProxy);
+                  succeeded = true;
+                  showToast('Alternatif ücretsiz ses kaynağından oynatılıyor.');
+                } catch {
+                  failedUrlsRef.current.set(altProxy, Date.now());
+                }
+              }
+            } catch {
+              // Ignore fallback search failure
+            }
+          }
+
+          if (!succeeded) {
+            diagnosedReason = await diagnoseProxyFailure(primaryProxy);
+            throw lastError ?? new Error(diagnosedReason || 'Ses kaynağına ulaşılamadı.');
+          }
         } else {
-          throw new Error('Bu kayıt için oynatılabilir ses dosyası bulunamadı.');
+          throw new Error('NO_AUDIO_SOURCE');
         }
 
         if (seq !== playRequestSeqRef.current) return;
@@ -782,14 +1009,26 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
         setRecentlyPlayed((prev) => {
           const filtered = prev.filter((p) => p.contentId !== item.contentId);
-          return [item, ...filtered].slice(0, 30);
+          return [item, ...filtered].slice(0, 40);
         });
 
+        setPlayCounts((prev) => ({
+          ...prev,
+          [item.contentId]: (prev[item.contentId] ?? 0) + 1,
+        }));
+
         if ('mediaSession' in navigator) {
+          const artwork: MediaImage[] = item.coverUrl
+            ? [
+                { src: item.coverUrl, sizes: '256x256', type: 'image/jpeg' },
+                { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+              ]
+            : [{ src: '/pwa-512.png', sizes: '512x512', type: 'image/png' }];
           navigator.mediaSession.metadata = new MediaMetadata({
             title: item.title,
             artist: item.artistName,
             album: item.album,
+            artwork,
           });
           navigator.mediaSession.playbackState = 'playing';
         }
@@ -802,10 +1041,21 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         if (err instanceof Error && err.name === 'AbortError') return;
         setIsBuffering(false);
         setIsPlaying(false);
-        const message =
-          err instanceof Error && err.name === 'NotAllowedError'
-            ? 'Tarayıcı otomatik oynatmayı engelledi. Oynat düğmesine dokunun.'
-            : 'Ses akışı başlatılamadı. İnternet bağlantınızı kontrol edin veya çevrimdışı indirilenleri dinleyin.';
+
+        let message: string;
+        if (!navigator.onLine) {
+          message = 'İnternet bağlantısı yok. Çevrimdışı arşivdeki indirilen kayıtları dinleyebilirsiniz.';
+        } else if (err instanceof Error && err.name === 'NotAllowedError') {
+          message = 'Tarayıcı otomatik oynatmayı engelledi. Devam etmek için Oynat düğmesine dokunun.';
+        } else if (err instanceof Error && err.message === 'PLAYBACK_TIMEOUT') {
+          message = 'Ses akışı zaman aşımına uğradı. Sağlayıcı şu an yavaş yanıt veriyor.';
+        } else if (err instanceof Error && err.message === 'NO_AUDIO_SOURCE') {
+          message = 'Bu kayıt için oynatılabilir ses dosyası bulunamadı.';
+        } else if (err instanceof Error && err.message.startsWith('Ses ')) {
+          message = err.message;
+        } else {
+          message = 'Ses akışı başlatılamadı. Kaynak geçici olarak erişilemiyor veya desteklenmeyen formatta.';
+        }
         setPlaybackError(message);
         showToast(message);
       }
@@ -866,7 +1116,9 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       }
       return;
     }
-    await sharedAudioEngine.resumeContext();
+    if (eqSettings.enabled && audioEl.src) {
+      await sharedAudioEngine.resumeContext(audioEl.src);
+    }
     if (audioEl.paused) {
       try {
         if (!audioEl.src) {
@@ -884,7 +1136,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(false);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     }
-  }, [currentTrack, loadAndPlayItem, queue]);
+  }, [currentTrack, eqSettings.enabled, loadAndPlayItem, queue]);
 
   const nextTrack = useCallback(async () => {
     if (queue.length === 0) return;
@@ -921,8 +1173,17 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const seekTo = useCallback((sec: number) => {
     const audioEl = sharedAudioEngine.element;
     if (!Number.isFinite(sec)) return;
-    audioEl.currentTime = Math.max(0, Math.min(audioEl.duration || sec, sec));
-    setCurrentTime(audioEl.currentTime);
+    const clamped = Math.max(0, Math.min(Number.isFinite(audioEl.duration) ? audioEl.duration : sec, sec));
+    audioEl.currentTime = clamped;
+    setCurrentTime(clamped);
+  }, []);
+
+  const seekBy = useCallback((deltaSec: number) => {
+    const audioEl = sharedAudioEngine.element;
+    const dur = Number.isFinite(audioEl.duration) ? audioEl.duration : 0;
+    const nextPos = Math.max(0, dur > 0 ? Math.min(dur, audioEl.currentTime + deltaSec) : Math.max(0, audioEl.currentTime + deltaSec));
+    audioEl.currentTime = nextPos;
+    setCurrentTime(nextPos);
   }, []);
 
   const setVolume = useCallback((v: number) => {
@@ -936,14 +1197,70 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     setRepeatMode((m) => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'));
   }, []);
 
-  // Wire HTMLAudioElement & MediaSession events
+  // Queue management actions
+  const jumpToQueueIndex = useCallback(
+    async (idx: number) => {
+      if (idx < 0 || idx >= queue.length) return;
+      setCurrentIndex(idx);
+      await loadAndPlayItem(queue[idx], true);
+    },
+    [loadAndPlayItem, queue]
+  );
+
+  const removeFromQueue = useCallback(
+    (idx: number) => {
+      if (idx < 0 || idx >= queue.length || idx === currentIndex) return;
+      setQueue((prev) => prev.filter((_, i) => i !== idx));
+      if (idx < currentIndex) {
+        setCurrentIndex((ci) => Math.max(0, ci - 1));
+      }
+    },
+    [currentIndex, queue.length]
+  );
+
+  const moveQueueItem = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= queue.length || toIdx >= queue.length) return;
+      setQueue((prev) => {
+        const copy = [...prev];
+        const [moved] = copy.splice(fromIdx, 1);
+        copy.splice(toIdx, 0, moved);
+        return copy;
+      });
+      setCurrentIndex((ci) => {
+        if (ci === fromIdx) return toIdx;
+        if (fromIdx < ci && toIdx >= ci) return ci - 1;
+        if (fromIdx > ci && toIdx <= ci) return ci + 1;
+        return ci;
+      });
+    },
+    [queue.length]
+  );
+
+  const addToQueueNext = useCallback(
+    (rawItem: MediaItem) => {
+      const item = healMediaItem(rawItem);
+      setQueue((prev) => {
+        const filtered = prev.filter((t) => t.contentId !== item.contentId);
+        const insertAt = Math.min(filtered.length, Math.max(0, currentIndex + 1));
+        filtered.splice(insertAt, 0, item);
+        return filtered;
+      });
+      showToast(`"${item.title}" sıradaki parça olarak eklendi.`);
+    },
+    [currentIndex, showToast]
+  );
+
+  // Wire HTMLAudioElement & Full MediaSession API events
   const nextTrackRef = useRef(nextTrack);
   const prevTrackRef = useRef(prevTrack);
+  const seekByRef = useRef(seekBy);
   const repeatModeRef = useRef(repeatMode);
   const currentTrackRef = useRef(currentTrack);
 
   useEffect(() => { nextTrackRef.current = nextTrack; }, [nextTrack]);
   useEffect(() => { prevTrackRef.current = prevTrack; }, [prevTrack]);
+  useEffect(() => { seekByRef.current = seekBy; }, [seekBy]);
   useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
 
@@ -951,12 +1268,30 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     const audioEl = sharedAudioEngine.element;
     let lastResumeSave = 0;
 
+    const syncPositionState = () => {
+      if ('mediaSession' in navigator && typeof navigator.mediaSession.setPositionState === 'function') {
+        const dur = Number.isFinite(audioEl.duration) && audioEl.duration > 0 ? audioEl.duration : 0;
+        if (dur > 0) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: dur,
+              playbackRate: audioEl.playbackRate || 1,
+              position: Math.min(dur, Math.max(0, audioEl.currentTime || 0)),
+            });
+          } catch {
+            // Ignore unsupported MediaSession position state
+          }
+        }
+      }
+    };
+
     const onTimeUpdate = () => {
       setCurrentTime(audioEl.currentTime || 0);
       const track = currentTrackRef.current;
       const now = Date.now();
       if (track && audioEl.currentTime > 3 && now - lastResumeSave > 4000) {
         lastResumeSave = now;
+        syncPositionState();
         setResumePoints((prev) => ({
           ...prev,
           [track.contentId]: {
@@ -967,12 +1302,32 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         }));
       }
     };
-    const onDurationChange = () => setDuration(Number.isFinite(audioEl.duration) ? audioEl.duration : 0);
+
+    const onDurationChange = () => {
+      setDuration(Number.isFinite(audioEl.duration) ? audioEl.duration : 0);
+      syncPositionState();
+    };
     const onWaiting = () => setIsBuffering(true);
     const onCanPlay = () => setIsBuffering(false);
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPlay = () => {
+      setIsPlaying(true);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      syncPositionState();
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      syncPositionState();
+    };
     const onEnded = () => {
+      if (sleepTimerModeRef.current === 'end_of_track') {
+        setSleepTimerMode('off');
+        setSleepTimerRemainingSec(null);
+        setIsPlaying(false);
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+        showToast('Uyku zamanlayıcısı: Parça tamamlandı, oynatma durduruldu.');
+        return;
+      }
       if (repeatModeRef.current === 'one') {
         audioEl.currentTime = 0;
         void audioEl.play();
@@ -990,14 +1345,29 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     audioEl.addEventListener('ended', onEnded);
 
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => void audioEl.play());
-      navigator.mediaSession.setActionHandler('pause', () => audioEl.pause());
-      navigator.mediaSession.setActionHandler('nexttrack', () => void nextTrackRef.current());
-      navigator.mediaSession.setActionHandler('previoustrack', () => void prevTrackRef.current());
-      navigator.mediaSession.setActionHandler('seekto', (details) => {
+      const safeSetHandler = (action: MediaSessionAction, handler: MediaSessionActionHandler) => {
+        try {
+          navigator.mediaSession.setActionHandler(action, handler);
+        } catch {
+          // Action not supported on this browser
+        }
+      };
+      safeSetHandler('play', () => void audioEl.play());
+      safeSetHandler('pause', () => audioEl.pause());
+      safeSetHandler('stop', () => {
+        audioEl.pause();
+        audioEl.currentTime = 0;
+        setCurrentTime(0);
+      });
+      safeSetHandler('nexttrack', () => void nextTrackRef.current());
+      safeSetHandler('previoustrack', () => void prevTrackRef.current());
+      safeSetHandler('seekbackward', (details) => seekByRef.current(-(details.seekOffset ?? 15)));
+      safeSetHandler('seekforward', (details) => seekByRef.current(details.seekOffset ?? 15));
+      safeSetHandler('seekto', (details) => {
         if (typeof details.seekTime === 'number') {
           audioEl.currentTime = details.seekTime;
           setCurrentTime(details.seekTime);
+          syncPositionState();
         }
       });
     }
@@ -1011,7 +1381,19 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       audioEl.removeEventListener('pause', onPause);
       audioEl.removeEventListener('ended', onEnded);
     };
+  }, [showToast]);
+
+  // Search history handlers
+  const addSearchHistory = useCallback((term: string) => {
+    const clean = term.trim();
+    if (clean.length < 2) return;
+    setSearchHistory((prev) => [clean, ...prev.filter((x) => x.toLocaleLowerCase('tr-TR') !== clean.toLocaleLowerCase('tr-TR'))].slice(0, 12));
   }, []);
+
+  const clearSearchHistory = useCallback(() => {
+    setSearchHistory([]);
+    showToast('Arama geçmişi temizlendi.');
+  }, [showToast]);
 
   // Favorites handlers
   const toggleFavoriteTrack = useCallback(
@@ -1128,30 +1510,179 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  // Equalizer handlers
+  // Equalizer handlers (10-band + Custom Profiles)
   const updateEqSettings = useCallback((patch: Partial<EqualizerSettings>) => {
-    setEqSettings((prev) => ({ ...prev, ...patch }));
+    setEqSettings((prev) => normalizeEqualizerSettings({ ...prev, ...patch }));
   }, []);
 
   const applyEqPreset = useCallback((preset: EqPresetId) => {
-    const def = EQ_PRESETS[preset];
-    setEqSettings((prev) => ({
-      ...prev,
-      enabled: true,
-      preset,
-      bandsDb: [...def.bandsDb],
-      bassBoostDb: def.bassBoostDb,
-      trebleBoostDb: def.trebleBoostDb,
-    }));
+    const def = EQ_PRESETS[preset] ?? EQ_PRESETS.flat;
+    setEqSettings((prev) =>
+      normalizeEqualizerSettings({
+        ...prev,
+        enabled: true,
+        preset,
+        bandsDb: [...def.bandsDb],
+        preampDb: def.preampDb,
+        bassBoostDb: def.bassBoostDb,
+        trebleBoostDb: def.trebleBoostDb,
+      })
+    );
   }, []);
 
   const setEqBand = useCallback((index: number, db: number) => {
     setEqSettings((prev) => {
-      const nextBands = [...prev.bandsDb] as [number, number, number, number, number];
+      const nextBands = [...prev.bandsDb];
+      while (nextBands.length < 10) nextBands.push(0);
       nextBands[index] = Math.max(-12, Math.min(12, db));
       return { ...prev, enabled: true, preset: 'custom', bandsDb: nextBands };
     });
   }, []);
+
+  const saveCustomEqProfile = useCallback(
+    (name: string) => {
+      const trimmed = name.trim().slice(0, 40);
+      if (!trimmed) return;
+      const profile: CustomEqProfile = {
+        id: `eq-${Date.now().toString(36)}`,
+        name: trimmed,
+        bandsDb: [...eqSettings.bandsDb],
+        preampDb: eqSettings.preampDb,
+        bassBoostDb: eqSettings.bassBoostDb,
+        trebleBoostDb: eqSettings.trebleBoostDb,
+        volumeLeveler: eqSettings.volumeLeveler,
+      };
+      setEqSettings((prev) => ({
+        ...prev,
+        customProfiles: [profile, ...(prev.customProfiles ?? []).filter((p) => p.name !== trimmed)].slice(0, 12),
+      }));
+      showToast(`"${trimmed}" ekolayzır profili kaydedildi.`);
+    },
+    [eqSettings, showToast]
+  );
+
+  const deleteCustomEqProfile = useCallback(
+    (id: string) => {
+      setEqSettings((prev) => ({
+        ...prev,
+        customProfiles: (prev.customProfiles ?? []).filter((p) => p.id !== id),
+      }));
+      showToast('Özel ekolayzır profili silindi.');
+    },
+    [showToast]
+  );
+
+  const applyCustomEqProfile = useCallback(
+    (id: string) => {
+      const prof = (eqSettings.customProfiles ?? []).find((p) => p.id === id);
+      if (!prof) return;
+      setEqSettings((prev) =>
+        normalizeEqualizerSettings({
+          ...prev,
+          enabled: true,
+          preset: 'custom',
+          bandsDb: [...prof.bandsDb],
+          preampDb: prof.preampDb,
+          bassBoostDb: prof.bassBoostDb,
+          trebleBoostDb: prof.trebleBoostDb,
+          volumeLeveler: prof.volumeLeveler,
+        })
+      );
+      showToast(`"${prof.name}" profili uygulandı.`);
+    },
+    [eqSettings.customProfiles, showToast]
+  );
+
+  // JSON Backup & Restore (preserves user favorites, playlists, categories, EQ, settings)
+  const exportUserBackupJson = useCallback((): string => {
+    return JSON.stringify(
+      {
+        app: 'AutoMusic Pro 4',
+        version: 4,
+        exportedAt: new Date().toISOString(),
+        data: {
+          customCategories: categories.filter((c) => c.isCustom),
+          favoriteTracks,
+          favoriteArtistIds,
+          favoriteSurahNumbers,
+          favoriteReciterIds,
+          playlists,
+          recentlyPlayed,
+          playCounts,
+          resumePoints,
+          downloadSettings,
+          eqSettings,
+          selectedReciterId,
+          searchHistory,
+        },
+      },
+      null,
+      2
+    );
+  }, [
+    categories,
+    downloadSettings,
+    eqSettings,
+    favoriteArtistIds,
+    favoriteReciterIds,
+    favoriteSurahNumbers,
+    favoriteTracks,
+    playCounts,
+    playlists,
+    recentlyPlayed,
+    resumePoints,
+    searchHistory,
+    selectedReciterId,
+  ]);
+
+  const importUserBackupJson = useCallback(
+    (jsonText: string): { ok: boolean; message: string } => {
+      try {
+        const parsed = JSON.parse(jsonText) as { app?: string; data?: Record<string, unknown> };
+        if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
+          return { ok: false, message: 'Geçersiz yedek dosyası formatı.' };
+        }
+        const d = parsed.data;
+        if (Array.isArray(d.customCategories)) {
+          setCategories((prev) => mergeDefaultAndSavedCategories([...prev, ...(d.customCategories as MusicCategory[])]));
+        }
+        if (Array.isArray(d.favoriteTracks)) {
+          setFavoriteTracks((d.favoriteTracks as MediaItem[]).map(healMediaItem));
+        }
+        if (Array.isArray(d.favoriteArtistIds)) setFavoriteArtistIds(d.favoriteArtistIds as string[]);
+        if (Array.isArray(d.favoriteSurahNumbers)) setFavoriteSurahNumbers(d.favoriteSurahNumbers as number[]);
+        if (Array.isArray(d.favoriteReciterIds)) setFavoriteReciterIds(d.favoriteReciterIds as string[]);
+        if (Array.isArray(d.playlists)) {
+          setPlaylists(
+            (d.playlists as Playlist[]).map((pl) => ({ ...pl, items: (pl.items ?? []).map(healMediaItem) }))
+          );
+        }
+        if (Array.isArray(d.recentlyPlayed)) {
+          setRecentlyPlayed((d.recentlyPlayed as MediaItem[]).map(healMediaItem));
+        }
+        if (d.playCounts && typeof d.playCounts === 'object') {
+          setPlayCounts(d.playCounts as Record<string, number>);
+        }
+        if (d.resumePoints && typeof d.resumePoints === 'object') {
+          setResumePoints(d.resumePoints as Record<string, PlaybackResumePoint>);
+        }
+        if (d.downloadSettings && typeof d.downloadSettings === 'object') {
+          setDownloadSettings((prev) => ({ ...prev, ...(d.downloadSettings as Partial<DownloadSettings>) }));
+        }
+        if (d.eqSettings && typeof d.eqSettings === 'object') {
+          setEqSettings(normalizeEqualizerSettings(d.eqSettings as Partial<EqualizerSettings>));
+        }
+        if (typeof d.selectedReciterId === 'string') setSelectedReciterId(d.selectedReciterId);
+        if (Array.isArray(d.searchHistory)) setSearchHistory(d.searchHistory as string[]);
+
+        showToast('Yedek başarıyla geri yüklendi.');
+        return { ok: true, message: 'Tüm favoriler, listeler ve ayarlar geri yüklendi.' };
+      } catch {
+        return { ok: false, message: 'JSON dosyası okunamadı. Lütfen geçerli bir AutoMusic yedeği seçin.' };
+      }
+    },
+    [showToast]
+  );
 
   const value: AutoMusicContextValue = {
     screen,
@@ -1190,9 +1721,17 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     nextTrack,
     prevTrack,
     seekTo,
+    seekBy,
     setVolume,
     toggleShuffle,
     cycleRepeatMode,
+    jumpToQueueIndex,
+    removeFromQueue,
+    moveQueueItem,
+    addToQueueNext,
+    sleepTimerMode,
+    sleepTimerRemainingSec,
+    setSleepTimer,
     favoriteTracks,
     favoriteArtistIds,
     favoriteSurahNumbers,
@@ -1210,7 +1749,11 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     removeTrackFromPlaylist,
     moveTrackInPlaylist,
     recentlyPlayed,
+    playCounts,
     resumePoints,
+    searchHistory,
+    addSearchHistory,
+    clearSearchHistory,
     downloadSettings,
     updateDownloadSettings,
     downloads,
@@ -1226,6 +1769,11 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     updateEqSettings,
     applyEqPreset,
     setEqBand,
+    saveCustomEqProfile,
+    deleteCustomEqProfile,
+    applyCustomEqProfile,
+    exportUserBackupJson,
+    importUserBackupJson,
     toastMessage,
     showToast,
   };

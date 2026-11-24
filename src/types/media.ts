@@ -1,13 +1,30 @@
 export type RepeatMode = 'off' | 'all' | 'one';
 
+export type SleepTimerMode = 'off' | '15' | '30' | '45' | '60' | 'end_of_track';
+
 export type EqPresetId =
   | 'flat'
   | 'car'
   | 'headphones'
-  | 'bass_boost'
+  | 'pop'
+  | 'rock'
+  | 'arabesk'
+  | 'vocal'
+  | 'classic'
   | 'vocal_quran'
   | 'tasavvuf'
+  | 'bass_boost'
   | 'custom';
+
+export interface CustomEqProfile {
+  id: string;
+  name: string;
+  bandsDb: number[];
+  preampDb: number;
+  bassBoostDb: number;
+  trebleBoostDb: number;
+  volumeLeveler?: boolean;
+}
 
 export type NavTabId = 'home' | 'search' | 'quran' | 'library' | 'settings';
 
@@ -40,6 +57,7 @@ export type CategorySymbolId =
   | 'lazca'
   | 'turkuler'
   | 'arabesk'
+  | 'fantezi'
   | 'turk_sanat'
   | 'turk_pop'
   | 'turk_rock'
@@ -81,7 +99,9 @@ export interface MediaItem {
   durationSec: number;
   streamUrl: string;
   coverUrl?: string;
-  sourceProvider: 'mp3quran' | 'everyayah' | 'internet_archive' | 'jamendo' | 'local_file';
+  year?: string;
+  trackType?: 'studio' | 'live' | 'remix' | 'cover' | 'karaoke';
+  sourceProvider: 'mp3quran' | 'everyayah' | 'internet_archive' | 'jamendo' | 'audius' | 'wikimedia' | 'local_file';
   downloadAllowed: boolean;
   licenseName: string;
   bitrateKbps?: number;
@@ -185,9 +205,13 @@ export interface DownloadProgress {
 export interface EqualizerSettings {
   enabled: boolean;
   preset: EqPresetId;
-  bandsDb: [number, number, number, number, number];
+  bandsDb: number[];
+  preampDb: number;
   bassBoostDb: number;
   trebleBoostDb: number;
+  volumeLeveler: boolean;
+  crossfadeSec?: number;
+  customProfiles?: CustomEqProfile[];
 }
 
 export interface PlaybackResumePoint {
@@ -201,5 +225,7 @@ export interface CatalogProviderStatus {
   quranApiConnected: boolean;
   internetArchiveConnected: boolean;
   jamendoConfigured: boolean;
+  audiusConnected?: boolean;
+  wikimediaConnected?: boolean;
   localArchiveReady: boolean;
 }
