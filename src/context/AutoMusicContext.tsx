@@ -472,7 +472,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { sleepTimerModeRef.current = sleepTimerMode; }, [sleepTimerMode]);
   useEffect(() => { volumeRef.current = volume; }, [volume]);
   useEffect(() => { tvCastConnectedRef.current = tvCastConnected; }, [tvCastConnected]);
-  useEffect(() => { mutePhoneWhileCastingRef.current = mutePhoneWhileCasting; }, [mutePhoneWhileCasting]);
+  useEffect(() => { mutePhoneWhileCastingRef.current = mutePhoneWhileCasting; if (!mutePhoneWhileCasting) sharedAudioEngine.element.muted = false; }, [mutePhoneWhileCasting]);
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
@@ -1116,27 +1116,8 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
       const audioEl = sharedAudioEngine.element;
 
-      // If casting to Google TV with phone muted, stream directly on Google TV instead of double-playing on phone
-      if (tvCastConnectedRef.current && mutePhoneWhileCastingRef.current && !item.isLocalFile) {
-        audioEl.pause();
-        setIsPlayingOfflineFile(false);
-        setIsPlaying(true);
-        setIsBuffering(false);
-        setCurrentTime(0);
-        setDuration(item.durationSec || 0);
-        syncStateToTv({
-          track: item,
-          isPlaying: true,
-          positionSec: 0,
-          volume: volumeRef.current,
-          seekNonce: Date.now(),
-          updatedAt: Date.now(),
-        });
-        setRecentlyPlayed((prev) => [item, ...prev.filter((p) => p.contentId !== item.contentId)].slice(0, 40));
-        setPlayCounts((prev) => ({ ...prev, [item.contentId]: (prev[item.contentId] ?? 0) + 1 }));
-        return;
-      }
-
+      // Keep local playback available until receiver confirms playback.
+      sharedAudioEngine.element.muted = false;
       if (tvCastConnectedRef.current && !item.isLocalFile) {
         syncStateToTv({
           track: item,
@@ -2137,6 +2118,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const disconnectTvCast = useCallback(() => {
+    sharedAudioEngine.element.muted = false;
     if (tvCastClientRef.current) {
       tvCastClientRef.current.disconnect();
       tvCastClientRef.current = null;
@@ -2173,9 +2155,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
           const activeTrack = currentTrackRef.current;
           if (activeTrack && !activeTrack.isLocalFile) {
-            if (mutePhoneWhileCastingRef.current) {
-              sharedAudioEngine.element.pause();
-            }
+            sharedAudioEngine.element.muted = false;
             client.sendState({
               track: activeTrack,
               isPlaying: true,
@@ -2189,6 +2169,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         onPresence: (receiverCount) => {
           setTvReceiverCount(receiverCount);
           if (receiverCount === 0) {
+            sharedAudioEngine.element.muted = false;
             setTvCastError('Google TV alıcı ekranı kapandı veya bağlantısı kesildi.');
           } else {
             setTvCastError(null);
@@ -2196,6 +2177,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         },
         onTelemetry: (telemetry) => {
           if (mutePhoneWhileCastingRef.current) {
+            sharedAudioEngine.element.muted = telemetry.isPlaying && telemetry.currentTime > 0;
             setCurrentTime(telemetry.currentTime);
             if (telemetry.duration > 0) setDuration(telemetry.duration);
             setIsPlaying(telemetry.isPlaying);
@@ -2210,11 +2192,13 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
           }
         },
         onError: (msg) => {
+          sharedAudioEngine.element.muted = false;
           setTvCastConnected(false);
           setTvCastError(msg);
           showToast(msg);
         },
         onClose: () => {
+          sharedAudioEngine.element.muted = false;
           setTvCastConnected(false);
           setTvReceiverCount(0);
         },
