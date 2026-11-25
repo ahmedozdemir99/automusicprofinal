@@ -128,7 +128,7 @@ export const ConnectDevicesModal: React.FC = () => {
             </span>
             <div className="min-w-0">
               <h2 className="text-base font-bold text-[#F5F2EB] truncate">
-                Google TV &amp; Bluetooth Araç Bağlantısı
+                Google TV &amp; Araç Bağlantısı
               </h2>
               <p className="text-xs text-[#9B978E] truncate">
                 YouTube TV koduyla ekran paylaşımı veya araç ekranına Bluetooth bağlantısı
@@ -157,7 +157,7 @@ export const ConnectDevicesModal: React.FC = () => {
             }`}
           >
             <Tv className="w-4 h-4 shrink-0" />
-            <span>Google TV Paylaş</span>
+            <span>Google TV</span>
             {tvCastConnected && (
               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             )}
@@ -172,7 +172,7 @@ export const ConnectDevicesModal: React.FC = () => {
             }`}
           >
             <Bluetooth className="w-4 h-4 shrink-0" />
-            <span>Bluetooth Araç</span>
+            <span>Araç</span>
             {btConnected && (
               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             )}
@@ -180,12 +180,12 @@ export const ConnectDevicesModal: React.FC = () => {
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-5">
+        <div className="p-3 sm:p-4 overflow-y-auto space-y-2">
           {connectModalTab === 'tv' ? (
             <>
               {/* Active TV Connection Card */}
               {tvCastConnected && tvCastCode ? (
-                <div className="p-4 rounded-2xl bg-emerald-500/12 border border-emerald-500/35 space-y-3">
+                <div className="p-3 rounded-xl bg-emerald-500/12 border border-emerald-500/35 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <MonitorPlay className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -205,7 +205,7 @@ export const ConnectDevicesModal: React.FC = () => {
                       onClick={disconnectTvCast}
                       className="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-red-500/20 border border-white/10 text-xs font-semibold text-[#F5F2EB] transition-colors"
                     >
-                      Bağlantıyı Kes
+                      Ayır
                     </button>
                   </div>
 
@@ -229,15 +229,14 @@ export const ConnectDevicesModal: React.FC = () => {
               ) : (
                 <form
                   onSubmit={handlePairSubmit}
-                  className="p-5 rounded-2xl bg-[#18181F] border border-white/[0.08] space-y-4"
+                  className="p-3 rounded-xl bg-[#18181F] border border-white/[0.08] space-y-2"
                 >
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-[#F5F2EB]">
-                      1. Tam Ekran Görüntü + Ses: YouTube TV Koduyla Eşleştir
+                      TV koduyla bağlan
                     </h3>
                     <p className="text-xs text-[#9B978E] leading-relaxed">
-                      Google TV ekranında kapak görseli, şarkı/sure adı ve canlı oynatıcı görüntüsü için
-                      TV tarayıcınızdan Alıcı Ekranını açıp 6 haneli kodu buraya girin.
+                      TV tarayıcısında alıcı adresini açın ve 6 haneli kodu girin.
                     </p>
                   </div>
 
@@ -282,10 +281,10 @@ export const ConnectDevicesModal: React.FC = () => {
               )}
 
               {/* TV Receiver Link & Launch Box */}
-              <div className="p-4 rounded-2xl bg-[#16161C] border border-white/[0.07] space-y-3">
+              <div className="p-3 rounded-xl bg-[#16161C] border border-white/[0.07] space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold text-[#E5C158]">
-                    Google TV / Akıllı TV Alıcı Adresi
+                    TV alıcı adresi
                   </p>
                   <button
                     type="button"
@@ -293,7 +292,7 @@ export const ConnectDevicesModal: React.FC = () => {
                     className="h-8 px-3 rounded-lg bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-xs font-semibold text-[#E5C158] inline-flex items-center gap-1.5 transition-colors"
                   >
                     <Tv className="w-3.5 h-3.5" />
-                    Bu Cihazda TV Ekranını Aç
+                    Alıcıyı aç
                   </button>
                 </div>
 
@@ -324,30 +323,26 @@ export const ConnectDevicesModal: React.FC = () => {
                     className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-[#F5F2EB] inline-flex items-center gap-1.5 shrink-0"
                   >
                     <Share2 className="w-3.5 h-3.5 text-[#D4AF37]" />
-                    TV’ye Gönder
+                    Paylaş
                   </button>
                 </div>
-                <p className="text-[11px] text-[#8C887F] leading-relaxed">
-                  Google TV’nizdeki tarayıcıdan (TV Bro, JioPages veya Chrome) bu adresi açtığınızda
-                  ekranınızda büyük 6 haneli bir eşleştirme kodu görünür. Telefonunuzdan bu kodu
-                  girdiğinizde oynatma listesi, kapak görseli ve ses anında TV’ye yansıtılır.
-                </p>
+                
               </div>
 
               {/* Native Wi-Fi Cast Option */}
-              <div className="p-4 rounded-2xl bg-[#16161C] border border-white/[0.07] space-y-3">
+              <div className="p-3 rounded-xl bg-[#16161C] border border-white/[0.07] space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
                       <Radio className="w-3.5 h-3.5 text-[#D4AF37]" />
-                      2. Doğrudan Wi-Fi Chromecast / Google Cast
+                      Doğrudan Google Cast
                     </p>
                     <p className="text-[11px] text-[#8C887F] leading-relaxed">
                       {isRemoteCastSupported
                         ? currentTrack
                           ? 'Destekleyen tarayıcılarda kapak ve parça bilgisini Cast eder; standart Chrome Remote Playback modunda ise yalnızca ses (Chrome simgesi) gönderilir.'
                           : 'Doğrudan Cast için önce bir parça başlatıp tekrar deneyebilirsiniz.'
-                        : 'Tarayıcınız doğrudan mDNS Cast penceresini desteklemiyor; yukarıdaki 6 haneli TV Kodu tüm Google TV’lerde tam görüntülü çalışır.'}
+                        : 'Doğrudan Cast desteklenmiyor. TV kodunu deneyin.'}
                     </p>
                   </div>
                   <button
@@ -373,7 +368,7 @@ export const ConnectDevicesModal: React.FC = () => {
             <>
               {/* Active Bluetooth Device */}
               {btConnected && btDeviceName ? (
-                <div className="p-4 rounded-2xl bg-emerald-500/12 border border-emerald-500/35 flex flex-wrap items-center justify-between gap-3">
+                <div className="p-3 rounded-xl bg-emerald-500/12 border border-emerald-500/35 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
                       <BluetoothConnected className="w-5 h-5 text-emerald-400" />
@@ -397,20 +392,19 @@ export const ConnectDevicesModal: React.FC = () => {
                     onClick={disconnectBluetoothCar}
                     className="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-red-500/20 border border-white/10 text-xs font-semibold text-[#F5F2EB]"
                   >
-                    Bağlantıyı Kes
+                    Ayır
                   </button>
                 </div>
               ) : null}
 
               {/* Bluetooth Scan & Pair Card */}
-              <div className="p-5 rounded-2xl bg-[#18181F] border border-white/[0.08] space-y-4">
+              <div className="p-3 rounded-xl bg-[#18181F] border border-white/[0.08] space-y-2">
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-[#F5F2EB]">
-                    Aracın Bluetooth Multimedya Ekranına Bağlan
+                    Bluetooth bağlantısı
                   </h3>
                   <p className="text-xs text-[#9B978E] leading-relaxed">
-                    Web Bluetooth ile uyumlu araç kitini tarayıp eşleştirin veya telefonunuzun
-                    Bluetooth ses çıkışını (A2DP) araca bağlayıp Araç Modu ile sürüş ekranını açın.
+                    Telefonun Bluetooth ayarlarından araca bağlanın. Uyumlu cihazları burada da seçebilirsiniz.
                   </p>
                 </div>
 
@@ -422,7 +416,7 @@ export const ConnectDevicesModal: React.FC = () => {
                   >
                     <Bluetooth className="w-4 h-4 shrink-0" />
                     {isBluetoothBleSupported
-                      ? 'Bluetooth Araç Cihazı Tara ve Bağla'
+                      ? 'Araç Cihazı Tara ve Bağla'
                       : 'Bluetooth Durumunu Kontrol Et'}
                   </button>
 
@@ -464,12 +458,12 @@ export const ConnectDevicesModal: React.FC = () => {
               </div>
 
               {/* A2DP / AVRCP Car Screen Info & Car Mode Shortcut */}
-              <div className="p-4 rounded-2xl bg-[#16161C] border border-white/[0.07] space-y-3">
+              <div className="p-3 rounded-xl bg-[#16161C] border border-white/[0.07] space-y-2">
                 <div className="flex items-start gap-3">
                   <Smartphone className="w-5 h-5 text-[#D4AF37] shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-[#F5F2EB]">
-                      Araç Ekranı &amp; Direksiyon Tuşları (A2DP / AVRCP) Aktif
+                      Araç ekranı ve direksiyon tuşları
                     </p>
                     <p className="text-[11px] text-[#9B978E] leading-relaxed">
                       Telefonunuz aracınıza Bluetooth ses olarak bağlıyken; çalan şarkı adı, sanatçı/kâri,
@@ -488,7 +482,7 @@ export const ConnectDevicesModal: React.FC = () => {
                   className="w-full h-11 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs sm:text-sm font-semibold text-[#F5F2EB] inline-flex items-center justify-center gap-2 transition-colors"
                 >
                   <Car className="w-4 h-4 text-[#D4AF37]" />
-                  Büyük Ekranlı Araç Modunu Aç
+                  Araç modunu aç
                 </button>
               </div>
             </>
