@@ -357,7 +357,7 @@ const CURATED_PLAYLIST_BLUEPRINTS: CuratedPlaylistBlueprint[] = [
   { id: 'cur-tasavvuf-1', categoryId: 'tasavvuf', title: 'Ney Taksimleri ve Sükûnet', subtitle: 'Geleneksel Ney & Bendir', description: 'Zihni dinlendiren ney taksimleri ve tasavvuf musikisi' },
   { id: 'cur-tasavvuf-2', categoryId: 'tasavvuf', title: 'Mevlevi & Tasavvuf Seçkisi', subtitle: 'Klasik Tasavvuf Arşivi', description: 'Kadim Anadolu tasavvuf geleneğinden huzurlu kayıtlar' },
 
-  { id: 'cur-kuran-1', categoryId: 'kuran', title: '114 Sure Tam Hatim', subtitle: '6 Seçkin Kari · Sıralı Tilavet', description: 'Fatiha’dan Nas suresine kadar kesintisiz Kur’an-ı Kerim tilaveti' },
+  { id: 'cur-kuran-1', categoryId: 'kuran', title: '114 Sure Tam Hatim', subtitle: '6 Seçkin Kâri · Sıralı Tilavet', description: 'Fatiha’dan Nas suresine kadar kesintisiz Kur’an-ı Kerim tilaveti' },
   { id: 'cur-kuran-2', categoryId: 'kuran', title: 'Sabah & Akşam Sureleri', subtitle: 'Yasin · Rahman · Mülk · Vakıa · Kehf', description: 'Günlük okunan faziletli surelerden özel seçki' },
   { id: 'cur-kuran-3', categoryId: 'kuran', title: 'Kısa Sureler & Namaz Sureleri', subtitle: 'Duha’dan Nas Suresine', description: 'Ezber ve kısa yolculuklar için seçkin kısa sureler' },
 ];

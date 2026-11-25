@@ -166,7 +166,7 @@ const AppShell: React.FC = () => {
           />
           <SidebarLink
             icon={<Users className="w-4 h-4" />}
-            label="Sanatçılar ve Kariler"
+            label="Sanatçılar ve Kâriler"
             active={screen.name === 'artists'}
             onClick={() => navigate({ name: 'artists' })}
           />

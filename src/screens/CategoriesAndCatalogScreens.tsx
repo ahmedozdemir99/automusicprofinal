@@ -238,7 +238,7 @@ export const CategoriesScreen: React.FC = () => {
 // Screen 3: Sanatçı Listesi & Screen 4: Sanatçı Detayları
 // ============================================================
 export const ArtistsScreen: React.FC = () => {
-  const { catalogTracksByCategory, favoriteArtistIds, toggleFavoriteArtist, navigate } = useAutoMusic();
+  const { catalogTracksByCategory, favoriteArtistIds, toggleFavoriteArtist, navigate, playQueue } = useAutoMusic();
   const [query, setQuery] = useState('');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
 
@@ -298,13 +298,15 @@ export const ArtistsScreen: React.FC = () => {
     });
   }, [artists, favoriteArtistIds, onlyFavorites, query]);
 
+  const [expandedArtistId, setExpandedArtistId] = useState<string | null>(null);
+
   return (
     <div className="space-y-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Sanatçılar ve Kariler</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Sanatçılar ve Kâriler</h1>
           <p className="text-sm text-[#9B978E] mt-1">
-            Bir sanatçı seçerek tüm kayıtlarını sıralı veya karışık dinleyebilirsiniz
+            Sanatçı veya kâri kartına tıklayarak akordion çekmeceden kayıtları anında açıp dinleyebilirsiniz
           </p>
         </div>
         <div className="inline-flex items-center gap-1 p-1 bg-[#141418] border border-white/[0.08] rounded-xl self-start sm:self-auto">
@@ -335,42 +337,120 @@ export const ArtistsScreen: React.FC = () => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Sanatçı veya kari adına göre ara..."
+          placeholder="Sanatçı veya kâri adına göre ara..."
           className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#121216] border border-white/10 text-sm text-[#F5F2EB] placeholder:text-[#7C7970] focus:border-[#D4AF37] focus:outline-none"
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-4">
         {filtered.map((artist) => {
           const isFav = favoriteArtistIds.includes(artist.id);
+          const isExpanded = expandedArtistId === artist.id;
+          const isReciter = artist.id.startsWith('reciter:');
+          const reciter = isReciter ? RECITERS.find((r) => `reciter:${r.id}` === artist.id) : undefined;
+          
+          const artistTracks = isReciter
+            ? SURAHS.map((s) => buildSurahMediaItem(s, reciter!))
+            : Object.values(catalogTracksByCategory)
+                .flat()
+                .filter((t) => t.artistId === artist.id);
+
           return (
             <div
               key={artist.id}
-              className="p-4 rounded-2xl bg-[#121216] border border-white/[0.06] hover:border-[#D4AF37]/30 flex items-center justify-between gap-3 transition-colors"
+              className={`rounded-2xl border transition-all ${
+                isExpanded ? 'bg-[#161510] border-[#D4AF37]/50 shadow-lg' : 'bg-[#121216] border-white/[0.06] hover:border-[#D4AF37]/30'
+              }`}
             >
-              <button
-                type="button"
-                onClick={() => navigate({ name: 'artist_detail', artistId: artist.id })}
-                className="flex items-center gap-3.5 min-w-0 text-left flex-1"
-              >
-                <ArtworkCover motif={artist.motif} size="sm" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#F5F2EB] truncate">{artist.name}</p>
-                  <p className="text-xs text-[#9B978E] truncate mt-0.5">
-                    {artist.genre} · {artist.trackCount} kayıt
-                  </p>
+              <div className="p-4 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setExpandedArtistId(isExpanded ? null : artist.id)}
+                  className="flex items-center gap-3.5 min-w-0 text-left flex-1"
+                >
+                  <ArtworkCover motif={artist.motif} size="sm" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-[#F5F2EB] truncate">{artist.name}</p>
+                      <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#D4AF37]/15 text-[#D4AF37] font-medium shrink-0">
+                        {isExpanded ? 'Akordion Kapat' : 'Akordion Aç'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#9B978E] truncate mt-0.5">
+                      {artist.genre} · {artist.trackCount} kayıt
+                    </p>
+                  </div>
+                </button>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleFavoriteArtist(artist.id)}
+                    aria-label="Sanatçıyı favorilere ekle"
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors ${
+                      isFav ? 'text-[#D4AF37] bg-[#D4AF37]/10' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    <Heart className={`w-4 h-4 ${isFav ? 'fill-[#D4AF37]' : ''}`} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate({ name: 'artist_detail', artistId: artist.id })}
+                    className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#F5F2EB] transition-colors whitespace-nowrap hidden sm:inline-flex items-center"
+                  >
+                    Detay Sayfası
+                  </button>
                 </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleFavoriteArtist(artist.id)}
-                aria-label="Sanatçıyı favorilere ekle"
-                className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-colors ${
-                  isFav ? 'text-[#D4AF37] bg-[#D4AF37]/10' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isFav ? 'fill-[#D4AF37]' : ''}`} />
-              </button>
+              </div>
+
+              {/* Accordion Inline Drawer */}
+              {isExpanded && (
+                <div className="px-4 pb-4 pt-2 border-t border-white/[0.06] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-[#D4AF37] font-medium">Akordion Kayıt Listesi ({artistTracks.length})</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void playQueue(artistTracks, false)}
+                        className="h-8 px-3 rounded-lg bg-[#D4AF37] text-[#09090B] text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        Sıralı Çal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void playQueue(artistTracks, true)}
+                        className="h-8 px-3 rounded-lg bg-white/10 text-[#F5F2EB] text-xs font-medium flex items-center gap-1.5"
+                      >
+                        <Shuffle className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        Karışık
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto bg-[#0E0E12] rounded-xl p-1 divide-y divide-white/[0.04]">
+                    {artistTracks.map((item, idx) => (
+                      <TrackRow
+                        key={item.contentId}
+                        item={item}
+                        index={idx}
+                        queueContext={artistTracks}
+                        onOpenDetail={
+                          item.surahNumber && item.reciterId
+                            ? () =>
+                                navigate({
+                                  name: 'surah_detail',
+                                  surahNumber: item.surahNumber!,
+                                  reciterId: item.reciterId!,
+                                })
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

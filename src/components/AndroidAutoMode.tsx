@@ -206,7 +206,7 @@ export const AndroidAutoMode: React.FC = () => {
 
           {section === 'artists' && (
             <div className="space-y-3">
-              <p className={`text-xs ${mutedText}`}>Kariler ve Katalog Sanatçıları</p>
+              <p className={`text-xs ${mutedText}`}>Kâriler ve Katalog Sanatçıları</p>
               {RECITERS.map((rec) => (
                 <button
                   key={rec.id}
@@ -222,7 +222,7 @@ export const AndroidAutoMode: React.FC = () => {
                 >
                   <div>
                     <p className="text-base font-semibold">{rec.nameTr}</p>
-                    <p className={`text-xs ${mutedText}`}>Kur'an Karisi · {rec.style}</p>
+                    <p className={`text-xs ${mutedText}`}>Kur'an Kârisi · {rec.style}</p>
                   </div>
                   <Play className="w-5 h-5 text-[#D4AF37] fill-[#D4AF37]" />
                 </button>
@@ -328,7 +328,7 @@ export const AndroidAutoMode: React.FC = () => {
                   Karışık Dinle
                 </button>
               </div>
-              <p className="text-xs font-medium text-[#D4AF37]">Aktif Kari: {selectedReciter.nameTr}</p>
+              <p className="text-xs font-medium text-[#D4AF37]">Aktif Kâri: {selectedReciter.nameTr}</p>
               {quranItems.slice(0, 36).map((item) => (
                 <button
                   key={item.contentId}

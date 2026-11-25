@@ -181,7 +181,7 @@ export const DEFAULT_CATEGORIES: MusicCategory[] = [
     id: 'kuran',
     order: 17,
     name: "Kur'an-ı Kerim",
-    subtitle: '114 sure, 6 seçkin kari ve Türkçe meal',
+    subtitle: '114 sure, 6 seçkin kâri ve Türkçe meal',
     language: 'Arapça',
     genre: "Kur'an Tilaveti",
     motif: 'kuran',

@@ -117,7 +117,7 @@ export const HomeScreen: React.FC = () => {
               <BookOpen className="w-5 h-5 text-[#D4AF37] mb-3" />
               <div>
                 <p className="text-xl font-bold font-mono tabular-nums text-[#F5F2EB]">114</p>
-                <p className="text-xs text-[#9B978E] mt-0.5">Sure · 6 Kari</p>
+                <p className="text-xs text-[#9B978E] mt-0.5">Sure · 6 Kâri</p>
               </div>
             </button>
             <button
@@ -270,7 +270,7 @@ export const HomeScreen: React.FC = () => {
             <div>
               <h2 className="text-xl font-semibold text-[#F5F2EB]">Kur'an-ı Kerim Seçkisi</h2>
               <p className="text-xs text-[#9B978E] mt-0.5">
-                Aktif Kari: {activeReciter.nameTr} · Türkçe meal ve çevrimdışı kayıt destekli
+                Aktif Kâri: {activeReciter.nameTr} · Türkçe meal ve çevrimdışı kayıt destekli
               </p>
             </div>
             <button
@@ -356,7 +356,7 @@ export const HomeScreen: React.FC = () => {
                   <Users className="w-5 h-5 text-[#D4AF37]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#F5F2EB] truncate">Sanatçılar ve Kariler</p>
+                  <p className="text-sm font-semibold text-[#F5F2EB] truncate">Sanatçılar ve Kâriler</p>
                   <p className="text-xs text-[#9B978E] truncate">Sanatçı adına göre filtrele ve tüm kayıtları dinle</p>
                 </div>
               </div>

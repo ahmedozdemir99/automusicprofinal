@@ -142,6 +142,7 @@ export const StorageManagementScreen: React.FC = () => {
     downloads,
     storageEstimate,
     clearAllDownloads,
+    completeMissingDownloads,
     goBack,
   } = useAutoMusic();
 
@@ -250,6 +251,24 @@ export const StorageManagementScreen: React.FC = () => {
             <option value={192}>192 kbps</option>
             <option value={128}>128 kbps</option>
           </select>
+        </div>
+
+        {/* Missing / Failed download auto completion */}
+        <div className="pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-[#F5F2EB]">Eksik ve İnmeyen Dosyalar</p>
+            <p className="text-xs text-[#9B978E] mt-0.5">
+              İndirilemeyen veya yarım kalan tüm favori, sure ve liste kayıtlarını otomatik olarak tekrar dener ve tamamlar.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void completeMissingDownloads()}
+            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
+          >
+            <Download className="w-4 h-4 shrink-0" />
+            Eksik/İnmeyen Dosyaları Otomatik Tamamla
+          </button>
         </div>
 
         {/* Manual Explicit Clear */}
@@ -790,7 +809,7 @@ export const GeneralSettingsScreen: React.FC = () => {
           />
           <ProviderRow
             name="Kur'an-ı Kerim Açık Tilavet ve Diyanet Meali"
-            detail="MP3Quran, EveryAyah ve AlQuran Cloud (114 Sure, 6 Kari)"
+            detail="MP3Quran, EveryAyah ve AlQuran Cloud (114 Sure, 6 Kâri)"
             connected={providerStatus.quranApiConnected}
           />
           <ProviderRow

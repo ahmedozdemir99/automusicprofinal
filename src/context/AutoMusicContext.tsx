@@ -239,6 +239,7 @@ interface AutoMusicContextValue {
   removeDownload: (contentId: string) => Promise<void>;
   clearAllDownloads: () => Promise<void>;
   refreshStorageStats: () => Promise<void>;
+  completeMissingDownloads: () => Promise<void>;
 
   // Equalizer (10-Band DSP + Custom Profiles)
   eqSettings: EqualizerSettings;
@@ -712,75 +713,90 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         },
       }));
 
-      try {
-        let response = await fetch(getProxiedAudioUrl(item.streamUrl));
-        if (!response.ok) {
-          const fallbackUrl = getFallbackStreamUrl(item);
-          if (fallbackUrl) {
-            response = await fetch(getProxiedAudioUrl(fallbackUrl));
-          }
-        }
-        if (!response.ok) throw new Error('Ses dosyası indirilemedi.');
-
-        const contentLength = Number(response.headers.get('content-length') || 0);
-        const contentType = response.headers.get('content-type') || 'audio/mpeg';
-
-        let blob: Blob;
-        if (response.body && contentLength > 0) {
-          const reader = response.body.getReader();
-          const chunks: BlobPart[] = [];
-          let received = 0;
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) {
-              chunks.push(value);
-              received += value.length;
-              const pct = Math.min(99, Math.round((received / contentLength) * 100));
-              setDownloadProgressMap((prev) => ({
-                ...prev,
-                [item.contentId]: {
-                  contentId: item.contentId,
-                  title: item.title,
-                  progress: pct,
-                  status: 'downloading',
-                },
-              }));
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          let response = await fetch(getProxiedAudioUrl(item.streamUrl));
+          if (!response.ok) {
+            const fallbackUrl = getFallbackStreamUrl(item);
+            if (fallbackUrl) {
+              response = await fetch(getProxiedAudioUrl(fallbackUrl));
             }
           }
-          blob = new Blob(chunks, { type: contentType });
-        } else {
-          blob = await response.blob();
-        }
+          if (!response.ok && item.streamUrl) {
+            response = await fetch(item.streamUrl);
+          }
+          if (!response.ok) throw new Error('Ses dosyası indirilemedi.');
 
-        await saveOfflineAudio(item, blob);
-        await refreshStorageStats();
+          const contentLength = Number(response.headers.get('content-length') || 0);
+          const contentType = response.headers.get('content-type') || 'audio/mpeg';
 
-        setDownloadProgressMap((prev) => ({
-          ...prev,
-          [item.contentId]: {
-            contentId: item.contentId,
-            title: item.title,
-            progress: 100,
-            status: 'completed',
-          },
-        }));
+          let blob: Blob;
+          if (response.body && contentLength > 0) {
+            const reader = response.body.getReader();
+            const chunks: BlobPart[] = [];
+            let received = 0;
 
-        if (manual) {
-          showToast(`"${item.title}" çevrimdışı arşive kaydedildi.`);
-        }
-
-        window.setTimeout(() => {
-          setDownloadProgressMap((prev) => {
-            const copy = { ...prev };
-            if (copy[item.contentId]?.status === 'completed') {
-              delete copy[item.contentId];
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              if (value) {
+                chunks.push(value);
+                received += value.length;
+                const pct = Math.min(99, Math.round((received / contentLength) * 100));
+                setDownloadProgressMap((prev) => ({
+                  ...prev,
+                  [item.contentId]: {
+                    contentId: item.contentId,
+                    title: item.title,
+                    progress: pct,
+                    status: 'downloading',
+                  },
+                }));
+              }
             }
-            return copy;
-          });
-        }, 2800);
-      } catch {
+            blob = new Blob(chunks, { type: contentType });
+          } else {
+            blob = await response.blob();
+          }
+
+          await saveOfflineAudio(item, blob);
+          await refreshStorageStats();
+
+          setDownloadProgressMap((prev) => ({
+            ...prev,
+            [item.contentId]: {
+              contentId: item.contentId,
+              title: item.title,
+              progress: 100,
+              status: 'completed',
+            },
+          }));
+
+          if (manual) {
+            showToast(`"${item.title}" çevrimdışı arşive kaydedildi.`);
+          }
+
+          window.setTimeout(() => {
+            setDownloadProgressMap((prev) => {
+              const copy = { ...prev };
+              if (copy[item.contentId]?.status === 'completed') {
+                delete copy[item.contentId];
+              }
+              return copy;
+            });
+          }, 2800);
+
+          success = true;
+          break;
+        } catch {
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+        }
+      }
+
+      if (!success) {
         setDownloadProgressMap((prev) => ({
           ...prev,
           [item.contentId]: {
@@ -788,12 +804,11 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
             title: item.title,
             progress: 0,
             status: 'error',
-            errorMessage: 'İndirme yarıda kesildi. Tekrar deneyebilirsiniz.',
+            errorMessage: 'İndirilemedi. Tekrar deneyebilirsiniz.',
           },
         }));
-      } finally {
-        activeDownloadIdsRef.current.delete(item.contentId);
       }
+      activeDownloadIdsRef.current.delete(item.contentId);
     },
     [downloadSettings, downloads, refreshStorageStats, showToast]
   );
@@ -812,6 +827,38 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     await refreshStorageStats();
     showToast('Tüm çevrimdışı arşiv temizlendi.');
   }, [refreshStorageStats, showToast]);
+
+  const completeMissingDownloads = useCallback(async () => {
+    const pool = new Map<string, MediaItem>();
+    for (const t of favoriteTracks) pool.set(t.contentId, t);
+    for (const pl of playlists) {
+      for (const t of pl.items) pool.set(t.contentId, t);
+    }
+    for (const t of recentlyPlayed) pool.set(t.contentId, t);
+
+    for (const r of RECITERS) {
+      for (const s of SURAHS) {
+        const item = buildSurahMediaItem(s, r);
+        pool.set(item.contentId, item);
+      }
+    }
+
+    const itemsToCheck = Array.from(pool.values());
+    let count = 0;
+    showToast('Eksik ve inmeyen ses dosyaları taranıyor ve indiriliyor...');
+
+    for (const item of itemsToCheck) {
+      if (isOfflineDownloaded(item.contentId)) continue;
+      if (activeDownloadIdsRef.current.has(item.contentId)) continue;
+      try {
+        await triggerDownload(item, false);
+        count++;
+      } catch {
+        // continue
+      }
+    }
+    showToast(`Eksik dosyaları tamamlama tamamlandı. ${count} yeni kayıt arşive eklendi.`);
+  }, [favoriteTracks, playlists, recentlyPlayed, isOfflineDownloaded, triggerDownload, showToast]);
 
   const updateDownloadSettings = useCallback((patch: Partial<DownloadSettings>) => {
     setDownloadSettings((prev) => {
@@ -1764,6 +1811,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     removeDownload,
     clearAllDownloads,
     refreshStorageStats,
+    completeMissingDownloads,
     eqSettings,
     isEqSupported: sharedAudioEngine.isDspSupported,
     updateEqSettings,

@@ -112,7 +112,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
             </p>
             <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Kur'an-ı Kerim</h1>
             <p className="text-sm text-[#A8A49B]">
-              Seçili Kari: <span className="text-[#F5F2EB] font-medium">{activeReciter.nameTr}</span> ·{' '}
+              Seçili Kâri: <span className="text-[#F5F2EB] font-medium">{activeReciter.nameTr}</span> ·{' '}
               {activeReciter.style} · {activeReciter.bitrateKbps} kbps
             </p>
           </div>
@@ -160,16 +160,16 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                 : 'bg-[#19181F] hover:bg-[#23212A] border-[#D4AF37]/30 text-[#E5C158]'
             }`}
           >
-            Kari Değiştir (6)
+            Kâri Değiştir (6)
           </button>
         </div>
       </section>
 
-      {/* Screen 8: Kari Seçimi Grid */}
+      {/* Screen 8: Kâri Seçimi Grid */}
       {showReciterPanel && (
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-[#F5F2EB]">Kari Seçimi</h2>
+            <h2 className="text-lg font-semibold text-[#F5F2EB]">Kâri Seçimi</h2>
             <span className="text-xs text-[#9B978E]">Doğrulanmış açık kaynak MP3 tilavet akışları</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -189,7 +189,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                     type="button"
                     onClick={() => {
                       setSelectedReciterId(rec.id);
-                      showToast(`Kari seçildi: ${rec.nameTr}`);
+                      showToast(`Kâri seçildi: ${rec.nameTr}`);
                     }}
                     className="text-left flex-1 min-w-0 space-y-1"
                   >
@@ -211,7 +211,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                   <button
                     type="button"
                     onClick={() => toggleFavoriteReciter(rec.id)}
-                    aria-label={`${rec.nameTr} favori kari`}
+                    aria-label={`${rec.nameTr} favori kâri`}
                     className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-colors ${
                       isFavReciter
                         ? 'text-[#D4AF37] bg-[#D4AF37]/10'
@@ -489,7 +489,7 @@ export const SurahDetailScreen: React.FC<{ surahNumber: number; reciterId: strin
             </span>
           </div>
           <p className="text-sm text-[#9B978E]">
-            {surah.meaningTr} · Kari: {reciter.nameTr}
+            {surah.meaningTr} · Kâri: {reciter.nameTr}
             {sourceName ? ` · ${sourceName}` : ''}
           </p>
         </div>
@@ -558,7 +558,7 @@ export const SurahDetailScreen: React.FC<{ surahNumber: number; reciterId: strin
                     </button>
                   ) : (
                     <span className="text-[11px] text-[#7C7970]">
-                      Ayet ayet ses seçili karide desteklenmiyor (tam sure çalınabilir)
+                      Ayet ayet ses seçili kâride desteklenmiyor (tam sure çalınabilir)
                     </span>
                   )}
                 </div>

@@ -217,7 +217,7 @@ export const LibraryHubScreen: React.FC<{ initialTab?: 'playlists' | 'favorites'
               [
                 ['tracks', `Parçalar (${favoriteTracks.length})`],
                 ['surahs', `Sureler (${favoriteSurahNumbers.length})`],
-                ['reciters', `Kariler (${favoriteReciterIds.length})`],
+                ['reciters', `Kâriler (${favoriteReciterIds.length})`],
                 ['artists', `Sanatçılar (${favoriteArtistIds.length})`],
               ] as const
             ).map(([id, label]) => (
@@ -784,7 +784,7 @@ export const SearchScreen: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">Gelişmiş Arama</h1>
           <p className="text-sm text-[#9B978E] mt-1">
-            Şarkı, sanatçı, albüm, kategori, ilahi, ezgi, neşid, sure ve karileri Türkçe veya Arapça tek kutudan arayın.
+            Şarkı, sanatçı, albüm, kategori, ilahi, ezgi, neşid, sure ve kârileri Türkçe veya Arapça tek kutudan arayın.
           </p>
         </div>
 
@@ -962,7 +962,7 @@ export const SearchScreen: React.FC = () => {
           {/* Group 2: Kariler */}
           {matchedReciters.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-base font-semibold text-[#D4AF37]">Kariler ({matchedReciters.length})</h2>
+              <h2 className="text-base font-semibold text-[#D4AF37]">Kâriler ({matchedReciters.length})</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {matchedReciters.map((rec) => (
                   <button
