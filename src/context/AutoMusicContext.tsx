@@ -213,7 +213,6 @@ interface AutoMusicContextValue {
   jumpToQueueIndex: (idx: number) => Promise<void>;
   hiddenMusicIds: string[];
   hideMusic: (item: MediaItem) => void;
-  restoreHiddenMusic: () => void;
   removeFromQueue: (idx: number) => void;
   moveQueueItem: (fromIdx: number, toIdx: number) => void;
   addToQueueNext: (item: MediaItem) => void;
@@ -1615,7 +1614,6 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     setQueue(remaining);
     showToast('Müzik gizlendi. Kaynak arşiv korundu.');
   }, [queue, currentTrack, showToast]);
-  const restoreHiddenMusic = useCallback(() => { setHiddenMusicIds([]); showToast('Gizlenen müzikler geri getirildi.'); }, [showToast]);
   const removeFromQueue = useCallback(
     (idx: number) => {
       if (idx < 0 || idx >= queue.length || idx === currentIndex) return;
@@ -2376,7 +2374,6 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     jumpToQueueIndex,
     hiddenMusicIds,
     hideMusic,
-    restoreHiddenMusic,
     removeFromQueue,
     moveQueueItem,
     addToQueueNext,
