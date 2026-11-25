@@ -66,7 +66,6 @@ export const TrackRow: React.FC<TrackRowProps> = ({
     resumePoints,
     hiddenMusicIds,
     hideMusic,
-    restoreHiddenMusic,
   } = useAutoMusic();
 
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
@@ -283,7 +282,6 @@ export const TrackRow: React.FC<TrackRowProps> = ({
                   Sıradaki Olarak Çal
                 </button>
                 {item.categoryId !== 'kuran' && <button type="button" onClick={() => { hideMusic(item); setShowPlaylistMenu(false); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-red-300 hover:bg-white/[0.08]"><Trash2 className="w-3.5 h-3.5"/>Müziği Kaldır</button>}
-                {hiddenMusicIds.length > 0 && <button type="button" onClick={() => { restoreHiddenMusic(); setShowPlaylistMenu(false); }} className="w-full text-left px-2.5 py-2 rounded-lg text-xs text-[#E5C158]">Gizlenen müzikleri geri getir</button>}
                 <div className="border-t border-white/[0.08] pt-1">
                   <p className="px-2.5 py-1 text-[11px] font-medium text-[#9B978E]">
                     Çalma Listesine Ekle
