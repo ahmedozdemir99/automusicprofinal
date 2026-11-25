@@ -1429,6 +1429,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
     if (tvCastConnectedRef.current && mutePhoneWhileCastingRef.current && !currentTrack.isLocalFile) {
       const nextPlaying = !isPlaying;
+      if (nextPlaying) { void audioEl.play().catch(() => {}); } else { audioEl.pause(); }
       setIsPlaying(nextPlaying);
       syncStateToTv({
         track: currentTrack,
@@ -2120,9 +2121,11 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const disconnectTvCast = useCallback(() => {
     sharedAudioEngine.element.muted = false;
     if (tvCastClientRef.current) {
+      tvCastClientRef.current.sendState({ track: null, isPlaying: false, positionSec: 0, volume: volumeRef.current, updatedAt: Date.now() });
       tvCastClientRef.current.disconnect();
       tvCastClientRef.current = null;
     }
+    tvCastConnectedRef.current = false;
     setTvCastConnected(false);
     setTvCastCode(null);
     setTvReceiverCount(0);
@@ -2148,6 +2151,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
       const client = new TvCastControllerClient(clean, {
         onPaired: (receiverCount) => {
+          tvCastConnectedRef.current = true;
           setTvCastConnected(true);
           setTvReceiverCount(receiverCount);
           setTvCastError(null);
@@ -2180,7 +2184,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
             sharedAudioEngine.element.muted = telemetry.isPlaying && telemetry.currentTime > 0;
             setCurrentTime(telemetry.currentTime);
             if (telemetry.duration > 0) setDuration(telemetry.duration);
-            setIsPlaying(telemetry.isPlaying);
+            if (telemetry.isPlaying || sharedAudioEngine.element.paused) setIsPlaying(telemetry.isPlaying);
           }
         },
         onCommand: (cmd) => {
