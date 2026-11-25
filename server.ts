@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import 'dotenv/config';
 import express, { type Request, type Response } from 'express';
 import http from 'http';
@@ -1029,10 +1030,10 @@ async function startServer(): Promise<void> {
     const cleanPref = normalizeTvCode(preferred);
     if (cleanPref.length === 6) return cleanPref;
     for (let i = 0; i < 20; i++) {
-      const candidate = String(Math.floor(100000 + Math.random() * 900000));
+      const candidate = String(randomInt(100000, 1000000));
       if (!tvRooms.has(candidate)) return candidate;
     }
-    return String(Date.now()).slice(-6);
+    throw new Error('TV pairing code allocation exhausted');
   };
 
   const sendWs = (ws: WebSocket, payload: unknown) => {
@@ -1127,7 +1128,7 @@ export class ErrorOverlay extends HTMLElement {}
   const httpServer = http.createServer(app);
 
   // 8. Real-Time Google TV Cast & Pairing WebSocket Relay (/ws/tv-cast)
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws/tv-cast' });
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws/tv-cast', maxPayload: 64 * 1024 });
 
   wss.on('connection', (ws: WebSocket) => {
     let joinedCode: string | null = null;
@@ -1154,7 +1155,12 @@ export class ErrorOverlay extends HTMLElement {}
       role = null;
     };
 
+    let windowStart = Date.now();
+    let messageCount = 0;
+    let pairAttempts = 0;
     ws.on('message', (rawBuf) => {
+      if (Date.now() - windowStart >= 60000) { windowStart = Date.now(); messageCount = 0; pairAttempts = 0; }
+      if (++messageCount > 600) { ws.close(1008, 'Rate limit'); return; }
       let msg: Record<string, unknown>;
       try {
         msg = JSON.parse(rawBuf.toString()) as Record<string, unknown>;
@@ -1162,6 +1168,7 @@ export class ErrorOverlay extends HTMLElement {}
         return;
       }
 
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
       if (msg.type === 'ping') {
         sendWs(ws, { type: 'pong', ts: Date.now() });
         return;
@@ -1169,7 +1176,9 @@ export class ErrorOverlay extends HTMLElement {}
 
       if (msg.type === 'tv:register') {
         detach();
-        const code = allocateTvCode(typeof msg.code === 'string' ? msg.code : undefined);
+        let code: string;
+        try { code = allocateTvCode(typeof msg.code === 'string' ? msg.code : undefined); }
+        catch { sendWs(ws, { type: 'cast:error', message: 'TV kodu oluşturulamadı.' }); return; }
         let room = tvRooms.get(code);
         if (!room) {
           room = { code, receivers: new Set(), controllers: new Set(), state: null, lastUpdated: Date.now() };
@@ -1199,6 +1208,7 @@ export class ErrorOverlay extends HTMLElement {}
       }
 
       if (msg.type === 'controller:pair') {
+        if (++pairAttempts > 10) { ws.close(1008, 'Pairing rate limit'); return; }
         const code = normalizeTvCode(msg.code);
         if (code.length !== 6) {
           sendWs(ws, { type: 'cast:error', message: 'Lütfen Google TV ekranındaki 6 haneli kodu girin.' });
@@ -1237,7 +1247,7 @@ export class ErrorOverlay extends HTMLElement {}
           string,
           unknown
         > | null;
-        if (!nextState) return;
+        if (!nextState || Array.isArray(nextState)) return;
         room.state = nextState;
         room.lastUpdated = Date.now();
         room.receivers.forEach((r) => sendWs(r, { type: 'cast:state', state: nextState }));

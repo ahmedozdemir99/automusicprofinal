@@ -268,7 +268,10 @@ export async function promptNativeGoogleCast(
     try {
       await cw.cast.framework.CastContext.getInstance().requestSession();
       if (track) {
-        await syncTrackToActiveGoogleCastSession(track, positionSec, autoplay);
+        const loaded = await syncTrackToActiveGoogleCastSession(track, positionSec, autoplay);
+        if (!loaded) {
+          return { ok: false, message: 'Medya TV’ye yüklenemedi. Telefon oynatımı korunuyor.' };
+        }
         audioEl.pause();
       }
       return {
