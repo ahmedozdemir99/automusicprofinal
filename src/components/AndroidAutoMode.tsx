@@ -111,7 +111,7 @@ export const AndroidAutoMode: React.FC = () => {
   return (
     <div className={`fixed inset-0 z-50 flex flex-col transition-colors ${bgRoot}`}>
       {/* Car Mode Top Bar (Honest Distraction-Free Driving Interface) */}
-      <header className={`h-16 px-4 sm:px-5 border-b flex items-center justify-between gap-3 shrink-0 ${bgHeader}`}>
+      <header className={`min-h-16 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${bgHeader}`}>
         <div className="flex items-center gap-3 min-w-0">
           <span className={`text-lg font-bold tracking-tight whitespace-nowrap ${dayMode ? 'text-[#8C6D14]' : 'text-[#D4AF37]'}`}>
             AutoMusic Pro 4
@@ -121,7 +121,7 @@ export const AndroidAutoMode: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={() => openConnectModal('bluetooth')}
@@ -170,7 +170,7 @@ export const AndroidAutoMode: React.FC = () => {
       </header>
 
       {/* Main Car Layout: Browse Rail + Content + Oversized Playback Deck (supports portrait & landscape) */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12">
+      <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-12">
         {/* Left Navigation Rail (Large Touch Targets) */}
         <aside className={`md:col-span-3 border-b md:border-b-0 md:border-r p-3 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto ${bgHeader}`}>
           {navItems.map((item) => {
@@ -216,7 +216,7 @@ export const AndroidAutoMode: React.FC = () => {
         </aside>
 
         {/* Center Browse Grid */}
-        <main className="md:col-span-5 p-4 sm:p-5 overflow-y-auto space-y-4">
+        <main className="md:col-span-5 min-w-0 p-3 sm:p-5 overflow-y-auto space-y-4">
           {statusNote && (
             <div className="p-4 rounded-2xl bg-[#171612] border border-[#D4AF37]/30 text-sm text-[#E5C158]">
               {statusNote}
@@ -405,7 +405,7 @@ export const AndroidAutoMode: React.FC = () => {
         </main>
 
         {/* Right Side: Oversized Driving-Safe Media Playback Deck */}
-        <section className={`md:col-span-4 border-t md:border-t-0 md:border-l p-5 sm:p-6 flex flex-col items-center justify-center text-center gap-4 ${bgDeck}`}>
+        <section className={`md:col-span-4 min-w-0 border-t md:border-t-0 md:border-l p-3 sm:p-5 flex flex-col items-center justify-center text-center gap-4 ${bgDeck}`}>
           {currentTrack ? (
             <>
               <ArtworkCover
