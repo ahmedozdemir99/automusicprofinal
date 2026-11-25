@@ -199,6 +199,8 @@ interface AutoMusicContextValue {
   repeatMode: RepeatMode;
   playbackError: string | null;
   playTrack: (item: MediaItem, newQueue?: MediaItem[], startFromZero?: boolean) => Promise<void>;
+  hatimPoint: { surah: number; reciterId: string; positionSec: number } | null;
+  startHatim: () => Promise<void>;
   playQueue: (items: MediaItem[], shuffleStart?: boolean) => Promise<void>;
   togglePlay: () => Promise<void>;
   nextTrack: () => Promise<void>;
@@ -381,15 +383,20 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     readJson<string>(STORAGE_KEYS.SELECTED_RECITER, RECITERS[0].id)
   );
 
+  const [hatimPoint, setHatimPoint] = useState<{ surah: number; reciterId: string; positionSec: number } | null>(() => readJson('amp_hatim_v1', null));
+  const hatimActiveRef = useRef(false);
+  const hatimReciterRef = useRef('');
+  useEffect(() => { try { localStorage.setItem('amp_hatim_v1', JSON.stringify(hatimPoint)); } catch {} }, [hatimPoint]);
+  const lastMusic = useMemo(() => readJson<{ item: MediaItem; positionSec: number } | null>('amp_last_music_v1', null), []);
   // Playback
   const [queue, setQueue] = useState<MediaItem[]>(() =>
-    quranRepository.getSurahTracksForReciter(RECITERS[0].id).slice(0, 10)
+    lastMusic?.item && !lastMusic.item.isLocalFile ? [healMediaItem(lastMusic.item)] : quranRepository.getSurahTracksForReciter(RECITERS[0].id).slice(0, 10)
   );
-  const [currentIndex, setCurrentIndex] = useState<number>(-1);
+  const [currentIndex, setCurrentIndex] = useState<number>(lastMusic?.item && !lastMusic.item.isLocalFile ? 0 : -1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [isPlayingOfflineFile, setIsPlayingOfflineFile] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(lastMusic?.positionSec || 0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.9);
   const [shuffle, setShuffle] = useState(false);
@@ -1107,7 +1114,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   // Resilient Real Audio Playback Core
   // Offline First -> Primary Proxy -> Fallback Mirror Proxy -> Alternative Provider Auto-Search -> Clear Real Error Cause
   const loadAndPlayItem = useCallback(
-    async (rawItem: MediaItem, startFromZero = false) => {
+    async (rawItem: MediaItem, startFromZero = false, explicitPosition?: number) => {
       const item = healMediaItem(rawItem);
       const seq = ++playRequestSeqRef.current;
 
@@ -1158,10 +1165,10 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        const savedResume = resumePoints[item.contentId];
-        if (!startFromZero && savedResume && savedResume.positionSec > 5) {
+        const savedResume = explicitPosition !== undefined ? { positionSec: explicitPosition } : resumePoints[item.contentId];
+        if (!startFromZero && savedResume && savedResume.positionSec > (explicitPosition !== undefined ? 0 : 5)) {
           const onLoaded = () => {
-            if (audioEl.duration && savedResume.positionSec < audioEl.duration - 8) {
+            if (audioEl.duration && savedResume.positionSec < audioEl.duration - (explicitPosition !== undefined ? 0 : 8)) {
               audioEl.currentTime = savedResume.positionSec;
             }
             audioEl.removeEventListener('loadedmetadata', onLoaded);
@@ -1375,6 +1382,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
   const playTrack = useCallback(
     async (rawItem: MediaItem, newQueue?: MediaItem[], startFromZero = false) => {
+      hatimActiveRef.current = false;
       const item = healMediaItem(rawItem);
       const healedQueue = newQueue?.map(healMediaItem);
 
@@ -1403,6 +1411,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
 
   const playQueue = useCallback(
     async (items: MediaItem[], shuffleStart = false) => {
+      hatimActiveRef.current = false;
       if (items.length === 0) {
         showToast('Bu listede oynatılacak parça bulunmuyor.');
         return;
@@ -1416,6 +1425,16 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     },
     [loadAndPlayItem, showToast]
   );
+
+  const startHatim = useCallback(async () => {
+    const reciter = RECITERS.find(r => r.id === (hatimPoint?.reciterId || selectedReciterId)) || RECITERS[0];
+    const items = SURAHS.map(s => buildSurahMediaItem(s, reciter));
+    const index = Math.max(0, Math.min(items.length - 1, (hatimPoint?.surah || 1) - 1));
+    hatimActiveRef.current = true;
+    hatimReciterRef.current = reciter.id;
+    setShuffle(false); setRepeatMode('off'); setQueue(items); setCurrentIndex(index);
+    await loadAndPlayItem(items[index], false, hatimPoint?.positionSec || 0);
+  }, [hatimPoint, selectedReciterId, loadAndPlayItem]);
 
   const togglePlay = useCallback(async () => {
     const audioEl = sharedAudioEngine.element;
@@ -1447,7 +1466,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     if (audioEl.paused) {
       try {
         if (!audioEl.src) {
-          await loadAndPlayItem(currentTrack, false);
+          await loadAndPlayItem(currentTrack, false, lastMusic?.item.contentId === currentTrack.contentId ? lastMusic.positionSec : undefined);
           return;
         }
         await audioEl.play();
@@ -1664,6 +1683,8 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       if (track && audioEl.currentTime > 3 && now - lastResumeSave > 4000) {
         lastResumeSave = now;
+        if (hatimActiveRef.current && track.categoryId === 'kuran' && track.surahNumber) setHatimPoint({ surah: track.surahNumber, reciterId: hatimReciterRef.current, positionSec: audioEl.currentTime });
+        if (track.categoryId !== 'kuran' && !track.isLocalFile) { try { localStorage.setItem('amp_last_music_v1', JSON.stringify({ item: track, positionSec: audioEl.currentTime })); } catch {} }
         syncPositionState();
         setResumePoints((prev) => ({
           ...prev,
@@ -2360,6 +2381,8 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     moveTrackInPlaylist,
     recentlyPlayed,
     playCounts,
+    hatimPoint,
+    startHatim,
     resumePoints,
     searchHistory,
     addSearchHistory,
