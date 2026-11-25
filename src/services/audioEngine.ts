@@ -162,6 +162,8 @@ export class AutoMusicAudioEngine {
   private ctx: AudioContext | null = null;
   private sourceNode: MediaElementAudioSourceNode | null = null;
   private preampNode: GainNode | null = null;
+  private dryGain: GainNode | null = null;
+  private wetGain: GainNode | null = null;
   private eqFilters: BiquadFilterNode[] = [];
   private bassFilter: BiquadFilterNode | null = null;
   private trebleFilter: BiquadFilterNode | null = null;
@@ -330,7 +332,14 @@ export class AutoMusicAudioEngine {
       this.trebleFilter.connect(antiHissFilter);
       antiHissFilter.connect(this.compressor);
       this.compressor.connect(this.limiter);
-      this.limiter.connect(this.analyser);
+      this.dryGain = this.ctx.createGain();
+      this.wetGain = this.ctx.createGain();
+      this.dryGain.gain.value = 0;
+      this.wetGain.gain.value = 1;
+      this.sourceNode.connect(this.dryGain);
+      this.dryGain.connect(this.analyser);
+      this.limiter.connect(this.wetGain);
+      this.wetGain.connect(this.analyser);
       this.analyser.connect(this.ctx.destination);
 
       this.dspConnected = true;
@@ -392,6 +401,8 @@ export class AutoMusicAudioEngine {
     if (!this.dspConnected || !this.ctx) return;
     const now = this.ctx.currentTime;
     const active = settings.enabled;
+    this.dryGain?.gain.setTargetAtTime(active ? 0 : 1, now, 0.015);
+    this.wetGain?.gain.setTargetAtTime(active ? 1 : 0, now, 0.015);
 
     // Cumulative headroom compensation accounting for stacked bass/treble shelves + 10-band EQ
     const lowCumulative = (settings.bandsDb[0] ?? 0) + settings.bassBoostDb;
