@@ -41,6 +41,8 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
     downloadProgressMap,
     triggerDownload,
     resumePoints,
+    hatimPoint,
+    startHatim,
     currentTrack,
     isPlaying,
     isBuffering,
@@ -106,6 +108,11 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
 
   return (
     <div className="space-y-8 pb-10">
+      <section className="rounded-2xl border border-[#D4AF37]/30 bg-[#121216] p-4 space-y-3">
+        <div className="flex items-center gap-3"><BookOpen className="w-5 h-5 shrink-0 text-[#D4AF37]"/><div className="min-w-0"><h2 className="font-semibold text-[#E5C158]">Hatim Takibim</h2><p className="text-xs text-[#A8A49B]">{hatimPoint ? `${SURAHS.find(s => s.number === hatimPoint.surah)?.nameTr || ''} · ${formatDuration(hatimPoint.positionSec)}` : 'Fatiha Suresi ile başla'}</p></div></div>
+        <button type="button" onClick={() => void startHatim()} className="w-full min-h-11 px-3 py-2 rounded-xl bg-[#D4AF37] text-[#09090B] text-sm font-semibold flex items-center justify-center gap-2"><Play className="w-4 h-4 shrink-0 fill-current"/>{hatimPoint ? 'Hatme Devam Et' : 'Hatme Başla'}</button>
+        <p className="text-xs text-[#A8A49B]">Serbest sure dinleme hatim kaydını değiştirmez.</p>
+      </section>
       {/* Header & Active Reciter Banner — Strictly Aligned Uniform Buttons */}
       <section className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#19150B] via-[#121216] to-[#0B0B0E] border border-[#D4AF37]/20 space-y-6">
         <div className="flex items-start sm:items-center gap-5">
@@ -126,7 +133,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
           <button
             type="button"
             onClick={() => void playQueue(allSurahItems, false)}
-            className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 min-h-11 px-2 sm:px-4 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors min-w-0 whitespace-normal text-center"
           >
             <Play className="w-4 h-4 fill-current shrink-0" />
             Sırayla Dinle
@@ -134,7 +141,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
           <button
             type="button"
             onClick={() => void playQueue(allSurahItems, true)}
-            className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 min-h-11 px-2 sm:px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors min-w-0 whitespace-normal text-center"
           >
             <Shuffle className="w-4 h-4 text-[#D4AF37] shrink-0" />
             Karışık Dinle
@@ -142,7 +149,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
           <button
             type="button"
             onClick={cycleRepeatMode}
-            className={`inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl border text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`inline-flex items-center justify-center gap-2 min-h-11 px-2 sm:px-4 rounded-xl border text-sm font-medium transition-colors min-w-0 whitespace-normal text-center ${
               repeatMode !== 'off'
                 ? 'bg-[#D4AF37]/15 border-[#D4AF37]/50 text-[#E5C158]'
                 : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-[#CFCBC2]'
@@ -158,7 +165,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
           <button
             type="button"
             onClick={() => setShowReciterPanel((v) => !v)}
-            className={`inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl border text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`inline-flex items-center justify-center gap-2 min-h-11 px-2 sm:px-4 rounded-xl border text-sm font-medium transition-colors min-w-0 whitespace-normal text-center ${
               showReciterPanel
                 ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#E5C158]'
                 : 'bg-[#19181F] hover:bg-[#23212A] border-[#D4AF37]/30 text-[#E5C158]'
@@ -223,7 +230,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                       <button
                         type="button"
                         onClick={() => setExpandedReciterId(isExpanded ? null : rec.id)}
-                        className={`h-8 min-w-[78px] px-2.5 rounded-lg text-xs font-medium inline-flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
+                        className={`h-8 min-w-[78px] px-2.5 rounded-lg text-xs font-medium inline-flex items-center justify-center gap-1 transition-colors min-w-0 whitespace-normal text-center ${
                           isExpanded
                             ? 'bg-[#D4AF37] text-[#09090B]'
                             : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#D4AF37]'
@@ -359,7 +366,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
             <button
               type="button"
               onClick={handleSaveFavoritesAsQuranPlaylist}
-              className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-xl bg-[#141418] hover:bg-[#1C1C22] border border-white/10 text-xs font-medium text-[#E5C158] transition-colors whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-xl bg-[#141418] hover:bg-[#1C1C22] border border-white/10 text-xs font-medium text-[#E5C158] transition-colors min-w-0 whitespace-normal text-center"
             >
               <ListPlus className="w-4 h-4 shrink-0" />
               Favorilerden Liste
@@ -507,7 +514,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                       <button
                         type="button"
                         onClick={() => void playTrack(mediaItem, allSurahItems)}
-                        className="h-9 px-3 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
+                        className="h-9 px-3 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors min-w-0 whitespace-normal text-center"
                       >
                         <Play className="w-3.5 h-3.5 fill-current shrink-0" />
                         Tam Sureyi Başlat
@@ -522,7 +529,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                             reciterId: activeReciter.id,
                           })
                         }
-                        className="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[#F5F2EB] text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
+                        className="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[#F5F2EB] text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors min-w-0 whitespace-normal text-center"
                       >
                         <BookOpen className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
                         Ayet Ayet Dinle & Meali Gör
@@ -531,7 +538,7 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                       <button
                         type="button"
                         onClick={() => void triggerDownload(mediaItem, true)}
-                        className="h-9 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-[#CFCBC2] text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
+                        className="h-9 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-[#CFCBC2] text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors min-w-0 whitespace-normal text-center"
                       >
                         <Download className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
                         {isDownloaded ? 'Arşivde Kayıtlı' : 'Çevrimdışı İndir'}
@@ -648,7 +655,7 @@ export const SurahDetailScreen: React.FC<{ surahNumber: number; reciterId: strin
           <button
             type="button"
             onClick={() => void playTrack(fullSurahItem)}
-            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors min-w-0 whitespace-normal text-center"
           >
             <Play className="w-4 h-4 fill-current shrink-0" />
             Tam Sureyi Dinle
@@ -656,7 +663,7 @@ export const SurahDetailScreen: React.FC<{ surahNumber: number; reciterId: strin
           <button
             type="button"
             onClick={() => void triggerDownload(fullSurahItem, true)}
-            className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 min-h-11 px-2 sm:px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors min-w-0 whitespace-normal text-center"
           >
             {isSaved ? (
               <CheckCircle2 className="w-4 h-4 text-[#D4AF37] shrink-0" />
@@ -701,7 +708,7 @@ export const SurahDetailScreen: React.FC<{ surahNumber: number; reciterId: strin
                     <button
                       type="button"
                       onClick={() => void playTrack(ayahTrack, ayahMediaItems, true)}
-                      className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-[#D4AF37] hover:text-[#09090B] text-xs font-medium text-[#E5C158] transition-colors whitespace-nowrap"
+                      className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-[#D4AF37] hover:text-[#09090B] text-xs font-medium text-[#E5C158] transition-colors min-w-0 whitespace-normal text-center"
                     >
                       <Play className="w-3.5 h-3.5 fill-current shrink-0" />
                       Ayeti Dinle
