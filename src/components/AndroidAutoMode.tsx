@@ -109,7 +109,7 @@ export const AndroidAutoMode: React.FC = () => {
     : 'bg-[#191922] hover:bg-[#242430] text-[#F5F2EB] border-white/10';
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col transition-colors ${bgRoot}`}>
+    <div className={`fixed inset-0 z-50 flex flex-col overflow-hidden transition-colors ${bgRoot}`}>
       {/* Car Mode Top Bar (Honest Distraction-Free Driving Interface) */}
       <header className={`min-h-16 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${bgHeader}`}>
         <div className="flex items-center gap-3 min-w-0">
@@ -170,9 +170,9 @@ export const AndroidAutoMode: React.FC = () => {
       </header>
 
       {/* Main Car Layout: Browse Rail + Content + Oversized Playback Deck (supports portrait & landscape) */}
-      <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-12">
+      <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-12">
         {/* Left Navigation Rail (Large Touch Targets) */}
-        <aside className={`md:col-span-3 border-b md:border-b-0 md:border-r p-3 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto ${bgHeader}`}>
+        <aside className={`lg:col-span-3 border-b lg:border-b-0 lg:border-r p-3 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto ${bgHeader}`}>
           {navItems.map((item) => {
             const isQuran = item.id === 'quran';
             const isSelected = section === item.id;
@@ -216,7 +216,7 @@ export const AndroidAutoMode: React.FC = () => {
         </aside>
 
         {/* Center Browse Grid */}
-        <main className="md:col-span-5 min-w-0 p-3 sm:p-5 overflow-y-auto space-y-4">
+        <main className="lg:col-span-5 min-w-0 p-3 sm:p-5 overflow-y-auto space-y-4">
           {statusNote && (
             <div className="p-4 rounded-2xl bg-[#171612] border border-[#D4AF37]/30 text-sm text-[#E5C158]">
               {statusNote}
@@ -405,7 +405,7 @@ export const AndroidAutoMode: React.FC = () => {
         </main>
 
         {/* Right Side: Oversized Driving-Safe Media Playback Deck */}
-        <section className={`md:col-span-4 min-w-0 border-t md:border-t-0 md:border-l p-3 sm:p-5 flex flex-col items-center justify-center text-center gap-4 ${bgDeck}`}>
+        <section className={`lg:col-span-4 min-w-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-3 sm:p-5 flex flex-col items-center justify-center text-center gap-4 ${bgDeck}`}>
           {currentTrack ? (
             <>
               <ArtworkCover
@@ -414,7 +414,7 @@ export const AndroidAutoMode: React.FC = () => {
                 arabicTitle={currentTrack.arabicTitle}
                 size="lg"
               />
-              <div className="space-y-1 max-w-xs">
+              <div className="space-y-1 w-full max-w-md">
                 <h2 className="text-xl font-bold truncate">{currentTrack.title}</h2>
                 <p className={`text-sm font-medium truncate ${dayMode ? 'text-[#8C6D14]' : 'text-[#D4AF37]'}`}>
                   {currentTrack.artistName}
@@ -424,7 +424,7 @@ export const AndroidAutoMode: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => seekBy(-15)}
@@ -473,7 +473,7 @@ export const AndroidAutoMode: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={toggleShuffle}
