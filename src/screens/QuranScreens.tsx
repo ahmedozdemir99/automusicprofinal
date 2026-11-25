@@ -3,7 +3,9 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
+  ChevronUp,
   Download,
   Heart,
   ListPlus,
@@ -23,7 +25,7 @@ import { normalizeSearchText, quranRepository } from '../services/catalogReposit
 import { AyahItem, MediaItem } from '../types/media';
 
 // ============================================================
-// Screen 7 (Kur'an-ı Kerim), Screen 8 (Kari Seçimi), Screen 9 (Sure Listesi)
+// Screen 7 (Kur'an-ı Kerim), Screen 8 (Kâri Seçimi), Screen 9 (Sure Listesi)
 // ============================================================
 export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
   initialShowReciters = false,
@@ -52,6 +54,8 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
   } = useAutoMusic();
 
   const [showReciterPanel, setShowReciterPanel] = useState(initialShowReciters);
+  const [expandedReciterId, setExpandedReciterId] = useState<string | null>(null);
+  const [expandedSurahNumber, setExpandedSurahNumber] = useState<number | null>(null);
   const [surahQuery, setSurahQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'favorites' | 'downloaded' | 'mekke' | 'medine'>('all');
 
@@ -176,50 +180,135 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
             {RECITERS.map((rec) => {
               const isSelected = rec.id === selectedReciterId;
               const isFavReciter = favoriteReciterIds.includes(rec.id);
+              const isExpanded = expandedReciterId === rec.id;
+              const reciterSurahs = SURAHS.map((s) => buildSurahMediaItem(s, rec));
+              const popularSurahNumbers = [1, 36, 55, 56, 67, 78, 112, 113, 114];
+              const popularSurahs = SURAHS.filter((s) => popularSurahNumbers.includes(s.number)).map((s) =>
+                buildSurahMediaItem(s, rec)
+              );
+
               return (
                 <div
                   key={rec.id}
-                  className={`p-4 rounded-2xl border transition-colors flex items-start justify-between gap-3 ${
+                  className={`rounded-2xl border transition-all ${
                     isSelected
                       ? 'bg-[#1D190F] border-[#D4AF37]'
+                      : isExpanded
+                      ? 'bg-[#161510] border-[#D4AF37]/50 shadow-lg'
                       : 'bg-[#121216] border-white/[0.07] hover:border-[#D4AF37]/35'
                   }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedReciterId(rec.id);
-                      showToast(`Kâri seçildi: ${rec.nameTr}`);
-                    }}
-                    className="text-left flex-1 min-w-0 space-y-1"
-                  >
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-[#F5F2EB] truncate">{rec.nameTr}</p>
-                      {isSelected && <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />}
-                    </div>
-                    <p className="font-arabic text-base text-[#D4AF37]/85" dir="rtl">
-                      {rec.nameAr}
-                    </p>
-                    <p className="text-xs text-[#9B978E]">
-                      {rec.style} · {rec.country} · {rec.bitrateKbps} kbps
-                    </p>
-                    <p className="text-[11px] text-[#7C7970]">
-                      {rec.everyAyahFolder ? 'Sure + Ayet ayet dinleme destekli' : 'Tam sure tilaveti destekli'}
-                    </p>
-                  </button>
+                  <div className="p-4 flex items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedReciterId(rec.id);
+                        showToast(`Kâri seçildi: ${rec.nameTr}`);
+                      }}
+                      className="text-left flex-1 min-w-0 space-y-1"
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[#F5F2EB] truncate">{rec.nameTr}</p>
+                        {isSelected && <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />}
+                      </div>
+                      <p className="font-arabic text-base text-[#D4AF37]/85" dir="rtl">
+                        {rec.nameAr}
+                      </p>
+                      <p className="text-xs text-[#9B978E]">
+                        {rec.style} · {rec.country} · {rec.bitrateKbps} kbps
+                      </p>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => toggleFavoriteReciter(rec.id)}
-                    aria-label={`${rec.nameTr} favori kâri`}
-                    className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-colors ${
-                      isFavReciter
-                        ? 'text-[#D4AF37] bg-[#D4AF37]/10'
-                        : 'text-[#7C7970] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
-                    }`}
-                  >
-                    <Heart className={`w-4 h-4 ${isFavReciter ? 'fill-[#D4AF37]' : ''}`} />
-                  </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedReciterId(isExpanded ? null : rec.id)}
+                        className={`h-8 px-2 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+                          isExpanded
+                            ? 'bg-[#D4AF37] text-[#09090B]'
+                            : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#D4AF37]'
+                        }`}
+                        title={isExpanded ? 'Akordion Kapat' : 'Sureleri Göster (Akordion)'}
+                      >
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        <span className="hidden xs:inline">Sureler</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleFavoriteReciter(rec.id)}
+                        aria-label={`${rec.nameTr} favori kâri`}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                          isFavReciter
+                            ? 'text-[#D4AF37] bg-[#D4AF37]/10'
+                            : 'text-[#7C7970] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
+                        }`}
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isFavReciter ? 'fill-[#D4AF37]' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Accordion Inline Drawer for Reciter Surahs */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-2 border-t border-white/[0.06] space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-[#D4AF37]">Öne Çıkan Sureler ({rec.nameTr})</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => void playQueue(reciterSurahs, false)}
+                            className="h-6 px-2 rounded-md bg-[#D4AF37] text-[#09090B] text-[11px] font-semibold flex items-center gap-1"
+                          >
+                            <Play className="w-2.5 h-2.5 fill-current" />
+                            114 Sıralı
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void playQueue(reciterSurahs, true)}
+                            className="h-6 px-2 rounded-md bg-white/10 text-[#F5F2EB] text-[11px] font-medium flex items-center gap-1"
+                          >
+                            <Shuffle className="w-2.5 h-2.5 text-[#D4AF37]" />
+                            Karışık
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto bg-[#0E0E12] rounded-xl p-1 divide-y divide-white/[0.04]">
+                        {popularSurahs.map((item) => {
+                          const isItemPlaying = currentTrack?.contentId === item.contentId && isPlaying;
+                          return (
+                            <div
+                              key={item.contentId}
+                              className="px-2.5 py-1.5 flex items-center justify-between gap-2 hover:bg-white/[0.03] rounded-lg transition-colors"
+                            >
+                              <div className="min-w-0 flex items-center gap-2">
+                                <span className="text-[11px] font-mono text-[#D4AF37]">
+                                  {String(item.surahNumber).padStart(3, '0')}
+                                </span>
+                                <span className="text-xs font-medium text-[#F5F2EB] truncate">{item.title}</span>
+                                <span className="font-arabic text-xs text-[#D4AF37]/80" dir="rtl">
+                                  {item.arabicTitle}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void playTrack(item, reciterSurahs)}
+                                className={`h-6 px-2 rounded-md text-[11px] font-medium flex items-center gap-1 transition-colors ${
+                                  isItemPlaying
+                                    ? 'bg-[#D4AF37] text-[#09090B]'
+                                    : 'bg-white/[0.06] text-[#F5F2EB] hover:bg-[#D4AF37] hover:text-[#09090B]'
+                                }`}
+                              >
+                                <Play className="w-2.5 h-2.5 fill-current" />
+                                {isItemPlaying ? 'Çalıyor' : 'Dinle'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -285,110 +374,171 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
             const isCurrent = currentTrack?.contentId === mediaItem.contentId;
             const isFav = favoriteSurahNumbers.includes(surah.number);
             const isDownloaded = isOfflineDownloaded(mediaItem.contentId);
+            const isExpanded = expandedSurahNumber === surah.number;
             const dl = downloadProgressMap[mediaItem.contentId];
             const resume = resumePoints[mediaItem.contentId];
 
             return (
               <div
                 key={surah.number}
-                className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
+                className={`rounded-2xl border transition-all ${
                   isCurrent
-                    ? 'bg-[#1A1710] border-[#D4AF37]/50'
+                    ? 'bg-[#1A1710] border-[#D4AF37]/50 shadow-md'
+                    : isExpanded
+                    ? 'bg-[#15141A] border-[#D4AF37]/40 shadow-sm'
                     : 'bg-[#121216] border-white/[0.06] hover:border-white/[0.14]'
                 }`}
               >
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <button
-                    type="button"
-                    onClick={() => void playTrack(mediaItem, allSurahItems)}
-                    aria-label={`${surah.nameTr} suresini oynat`}
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center font-mono tabular-nums text-xs font-semibold shrink-0 transition-colors ${
-                      isCurrent && (isPlaying || isBuffering)
-                        ? 'bg-[#D4AF37] text-[#09090B]'
-                        : 'bg-[#1A191E] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#09090B]'
-                    }`}
-                  >
-                    {isCurrent && isBuffering ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : isCurrent && isPlaying ? (
-                      <Volume2 className="w-4 h-4" />
-                    ) : (
-                      String(surah.number).padStart(3, '0')
-                    )}
-                  </button>
+                <div className="p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => void playTrack(mediaItem, allSurahItems)}
+                      aria-label={`${surah.nameTr} suresini oynat`}
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center font-mono tabular-nums text-xs font-semibold shrink-0 transition-colors ${
+                        isCurrent && (isPlaying || isBuffering)
+                          ? 'bg-[#D4AF37] text-[#09090B]'
+                          : 'bg-[#1A191E] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#09090B]'
+                      }`}
+                    >
+                      {isCurrent && isBuffering ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isCurrent && isPlaying ? (
+                        <Volume2 className="w-4 h-4" />
+                      ) : (
+                        String(surah.number).padStart(3, '0')
+                      )}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate({
-                        name: 'surah_detail',
-                        surahNumber: surah.number,
-                        reciterId: activeReciter.id,
-                      })
-                    }
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-[#F5F2EB] truncate hover:text-[#E5C158]">
-                        {surah.nameTr} Suresi
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSurahNumber(isExpanded ? null : surah.number)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[#F5F2EB] truncate hover:text-[#E5C158]">
+                          {surah.nameTr} Suresi
+                        </p>
+                        <span className="font-arabic text-base text-[#D4AF37]/85 shrink-0" dir="rtl">
+                          {surah.nameAr}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#9B978E] truncate mt-0.5">
+                        {surah.meaningTr} · {surah.ayahCount} ayet · {surah.revelation}
+                        {resume && resume.positionSec > 10 ? ` · Kaldığı yer ${formatDuration(resume.positionSec)}` : ''}
                       </p>
-                      <span className="font-arabic text-base text-[#D4AF37]/85 shrink-0" dir="rtl">
-                        {surah.nameAr}
-                      </span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSurahNumber(isExpanded ? null : surah.number)}
+                      title={isExpanded ? 'Akordion Kapat' : 'Akordion Detay'}
+                      aria-label={`${surah.nameTr} akordion`}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                        isExpanded ? 'bg-[#D4AF37] text-[#09090B]' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate({
+                          name: 'surah_detail',
+                          surahNumber: surah.number,
+                          reciterId: activeReciter.id,
+                        })
+                      }
+                      title="Türkçe Meal ve Ayet Dinleme"
+                      aria-label={`${surah.nameTr} meali`}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9B978E] hover:text-[#D4AF37] hover:bg-white/[0.05] transition-colors hidden sm:flex"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => void triggerDownload(mediaItem, true)}
+                      title={isDownloaded ? 'Çevrimdışı kayıtlı' : 'Çevrimdışı indir'}
+                      aria-label={`${surah.nameTr} indir`}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                        isDownloaded ? 'text-[#D4AF37]' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      {dl?.status === 'downloading' ? (
+                        <Loader2 className="w-4 h-4 text-[#D4AF37] animate-spin" />
+                      ) : isDownloaded ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleFavoriteSurah(surah.number)}
+                      aria-label={`${surah.nameTr} favori`}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                        isFav ? 'text-[#D4AF37]' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${isFav ? 'fill-[#D4AF37]' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Accordion Inline Drawer for Surah Details & Quick Actions */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 pt-2 border-t border-white/[0.06] bg-[#0E0E12] rounded-b-2xl space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <div>
+                        <span className="text-[#D4AF37] font-semibold">{surah.number}. {surah.nameTr} Suresi</span>
+                        <span className="text-[#9B978E] ml-2">({surah.meaningTr})</span>
+                      </div>
+                      <div className="text-[11px] text-[#A19E95]">
+                        {surah.ayahCount} Ayet · {surah.revelation} Dönemi · Kâri: <span className="text-[#F5F2EB]">{activeReciter.nameTr}</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-[#9B978E] truncate mt-0.5">
-                      {surah.meaningTr} · {surah.ayahCount} ayet · {surah.revelation}
-                      {resume && resume.positionSec > 10 ? ` · Kaldığı yer ${formatDuration(resume.positionSec)}` : ''}
-                    </p>
-                  </button>
-                </div>
 
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate({
-                        name: 'surah_detail',
-                        surahNumber: surah.number,
-                        reciterId: activeReciter.id,
-                      })
-                    }
-                    title="Türkçe Meal ve Ayet Dinleme"
-                    aria-label={`${surah.nameTr} meali`}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl text-[#9B978E] hover:text-[#D4AF37] hover:bg-white/[0.05] transition-colors"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                  </button>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => void playTrack(mediaItem, allSurahItems)}
+                        className="h-8 px-3 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        Tam Sureyi Başlat
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => void triggerDownload(mediaItem, true)}
-                    title={isDownloaded ? 'Çevrimdışı kayıtlı' : 'Çevrimdışı indir'}
-                    aria-label={`${surah.nameTr} indir`}
-                    className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
-                      isDownloaded ? 'text-[#D4AF37]' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
-                    }`}
-                  >
-                    {dl?.status === 'downloading' ? (
-                      <Loader2 className="w-4 h-4 text-[#D4AF37] animate-spin" />
-                    ) : isDownloaded ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <Download className="w-4 h-4" />
-                    )}
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate({
+                            name: 'surah_detail',
+                            surahNumber: surah.number,
+                            reciterId: activeReciter.id,
+                          })
+                        }
+                        className="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[#F5F2EB] text-xs font-medium flex items-center gap-1.5 transition-colors"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        Ayet Ayet Dinle & Meali Gör
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => toggleFavoriteSurah(surah.number)}
-                    aria-label={`${surah.nameTr} favori`}
-                    className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
-                      isFav ? 'text-[#D4AF37]' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
-                    }`}
-                  >
-                    <Heart className={`w-4 h-4 ${isFav ? 'fill-[#D4AF37]' : ''}`} />
-                  </button>
-                </div>
+                      <button
+                        type="button"
+                        onClick={() => void triggerDownload(mediaItem, true)}
+                        className="h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-[#CFCBC2] text-xs font-medium flex items-center gap-1.5 transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        {isDownloaded ? 'Arşivde Kayıtlı' : 'Çevrimdışı İndir'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

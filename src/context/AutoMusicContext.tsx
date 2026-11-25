@@ -103,7 +103,7 @@ const DEFAULT_PLAYLISTS: Playlist[] = [
   {
     id: 'pl-kuran-huzur',
     name: 'Sabah Tilavet Seçkisi',
-    description: 'Seçkin karilerden favori sureler',
+    description: 'Seçkin kârilerden favori sureler',
     createdAt: Date.now() - 43200000,
     isQuranPlaylist: true,
     items: [
@@ -932,6 +932,11 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
           audioEl.volume = volumeRef.current;
         }
 
+        // Buffer pre-filling logic: ensure safe buffer cushion ahead before issuing play()
+        if (!srcUrl.startsWith('blob:')) {
+          await sharedAudioEngine.waitForBufferRefill(1.5, 3500);
+        }
+
         // 12-second playback start timeout so stalled servers never hang UI
         let timeoutId: number | null = null;
         try {
@@ -1354,19 +1359,30 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       setDuration(Number.isFinite(audioEl.duration) ? audioEl.duration : 0);
       syncPositionState();
     };
-    const onWaiting = () => setIsBuffering(true);
+    const onWaiting = () => {
+      setIsBuffering(true);
+      sharedAudioEngine.handlePlaybackStall(2.5);
+    };
+    const onStalled = () => {
+      if (!audioEl.paused) {
+        sharedAudioEngine.handlePlaybackStall(2.5);
+      }
+    };
     const onCanPlay = () => setIsBuffering(false);
+    const onCanPlayThrough = () => setIsBuffering(false);
     const onPlay = () => {
       setIsPlaying(true);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
       syncPositionState();
     };
     const onPause = () => {
+      sharedAudioEngine.resetBufferingState();
       setIsPlaying(false);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
       syncPositionState();
     };
     const onEnded = () => {
+      sharedAudioEngine.resetBufferingState();
       if (sleepTimerModeRef.current === 'end_of_track') {
         setSleepTimerMode('off');
         setSleepTimerRemainingSec(null);
@@ -1383,10 +1399,17 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Buffer state sync from audio engine
+    sharedAudioEngine.setBufferingListener((buffering) => {
+      setIsBuffering(buffering);
+    });
+
     audioEl.addEventListener('timeupdate', onTimeUpdate);
     audioEl.addEventListener('durationchange', onDurationChange);
     audioEl.addEventListener('waiting', onWaiting);
+    audioEl.addEventListener('stalled', onStalled);
     audioEl.addEventListener('canplay', onCanPlay);
+    audioEl.addEventListener('canplaythrough', onCanPlayThrough);
     audioEl.addEventListener('play', onPlay);
     audioEl.addEventListener('pause', onPause);
     audioEl.addEventListener('ended', onEnded);
@@ -1400,8 +1423,12 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         }
       };
       safeSetHandler('play', () => void audioEl.play());
-      safeSetHandler('pause', () => audioEl.pause());
+      safeSetHandler('pause', () => {
+        sharedAudioEngine.resetBufferingState();
+        audioEl.pause();
+      });
       safeSetHandler('stop', () => {
+        sharedAudioEngine.resetBufferingState();
         audioEl.pause();
         audioEl.currentTime = 0;
         setCurrentTime(0);
@@ -1420,10 +1447,13 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
+      sharedAudioEngine.setBufferingListener(null);
       audioEl.removeEventListener('timeupdate', onTimeUpdate);
       audioEl.removeEventListener('durationchange', onDurationChange);
       audioEl.removeEventListener('waiting', onWaiting);
+      audioEl.removeEventListener('stalled', onStalled);
       audioEl.removeEventListener('canplay', onCanPlay);
+      audioEl.removeEventListener('canplaythrough', onCanPlayThrough);
       audioEl.removeEventListener('play', onPlay);
       audioEl.removeEventListener('pause', onPause);
       audioEl.removeEventListener('ended', onEnded);

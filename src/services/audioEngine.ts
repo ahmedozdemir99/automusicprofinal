@@ -165,6 +165,7 @@ export class AutoMusicAudioEngine {
   private eqFilters: BiquadFilterNode[] = [];
   private bassFilter: BiquadFilterNode | null = null;
   private trebleFilter: BiquadFilterNode | null = null;
+  private highPassFilter: BiquadFilterNode | null = null;
   private compressor: DynamicsCompressorNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
@@ -173,6 +174,9 @@ export class AutoMusicAudioEngine {
   private lastAppliedSettings: EqualizerSettings | null = null;
   private baseVolume = 0.9;
   private fadeFrameId: number | null = null;
+  private rebuffering = false;
+  private rebufferingTimer: number | null = null;
+  private onBufferingChange: ((buffering: boolean) => void) | null = null;
 
   constructor() {
     this.audioEl = new Audio();
@@ -220,10 +224,25 @@ export class AutoMusicAudioEngine {
    * clearing crossOrigin allows native HTMLAudioElement playback without CORS blocking.
    */
   prepareForSource(url: string): void {
+    this.resetBufferingState();
     if (this.dspConnected || this.isCorsSafeUrl(url)) {
       this.audioEl.crossOrigin = 'anonymous';
     } else {
       this.audioEl.removeAttribute('crossorigin');
+    }
+  }
+
+  /**
+   * Resets any pending buffer refill timers and rebuffering flags.
+   */
+  resetBufferingState(): void {
+    if (this.rebufferingTimer !== null) {
+      window.clearTimeout(this.rebufferingTimer);
+      this.rebufferingTimer = null;
+    }
+    if (this.rebuffering) {
+      this.rebuffering = false;
+      this.onBufferingChange?.(false);
     }
   }
 
@@ -232,7 +251,15 @@ export class AutoMusicAudioEngine {
     if (!this.dspSupported || !this.ctx) return false;
 
     try {
-      this.sourceNode = this.ctx.createMediaElementSource(this.audioEl);
+      if (!this.sourceNode) {
+        this.sourceNode = this.ctx.createMediaElementSource(this.audioEl);
+      }
+
+      // Subsonic rumble and 50/60 Hz electrical hum elimination high-pass filter (28 Hz, Q = 0.707)
+      this.highPassFilter = this.ctx.createBiquadFilter();
+      this.highPassFilter.type = 'highpass';
+      this.highPassFilter.frequency.value = 28;
+      this.highPassFilter.Q.value = 0.707;
 
       this.preampNode = this.ctx.createGain();
       this.preampNode.gain.value = 1.0;
@@ -246,7 +273,7 @@ export class AutoMusicAudioEngine {
         const filter = this.ctx!.createBiquadFilter();
         filter.type = idx === 0 ? 'lowshelf' : idx === EQ_FREQUENCIES.length - 1 ? 'highshelf' : 'peaking';
         filter.frequency.value = freq;
-        filter.Q.value = idx === 0 || idx === EQ_FREQUENCIES.length - 1 ? 0.85 : 1.4;
+        filter.Q.value = idx === 0 || idx === EQ_FREQUENCIES.length - 1 ? 0.8 : 1.2;
         filter.gain.value = 0;
         return filter;
       });
@@ -256,28 +283,37 @@ export class AutoMusicAudioEngine {
       this.trebleFilter.frequency.value = 10000;
       this.trebleFilter.gain.value = 0;
 
-      // Volume leveler (gentle musical compression)
-      this.compressor = this.ctx.createDynamicsCompressor();
-      this.compressor.threshold.value = -18;
-      this.compressor.knee.value = 24;
-      this.compressor.ratio.value = 3;
-      this.compressor.attack.value = 0.008;
-      this.compressor.release.value = 0.18;
+      // Anti-hiss gentle low-pass filter at 18kHz to remove digital high-frequency MP3 compression noise
+      const antiHissFilter = this.ctx.createBiquadFilter();
+      antiHissFilter.type = 'lowpass';
+      antiHissFilter.frequency.value = 18000;
+      antiHissFilter.Q.value = 0.7;
 
-      // Always-on brickwall anti-clipping safety limiter (-0.5 dB ceiling)
+      // Ultra-transparent volume leveler (gentle musical compression)
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.value = -22;
+      this.compressor.knee.value = 28;
+      this.compressor.ratio.value = 2.2;
+      this.compressor.attack.value = 0.012;
+      this.compressor.release.value = 0.25;
+
+      // Brickwall anti-clipping safety limiter (-0.4 dB ceiling to eliminate any digital clipping distortion)
       this.limiter = this.ctx.createDynamicsCompressor();
-      this.limiter.threshold.value = -1.0;
-      this.limiter.knee.value = 3;
-      this.limiter.ratio.value = 16;
-      this.limiter.attack.value = 0.002;
-      this.limiter.release.value = 0.08;
+      this.limiter.threshold.value = -0.4;
+      this.limiter.knee.value = 2;
+      this.limiter.ratio.value = 24;
+      this.limiter.attack.value = 0.001;
+      this.limiter.release.value = 0.05;
 
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 128;
-      this.analyser.smoothingTimeConstant = 0.8;
+      this.analyser.smoothingTimeConstant = 0.85;
 
-      // Signal chain: Source -> Preamp -> Bass -> 10-Band EQ -> Treble -> Leveler -> Limiter -> Analyser -> Destination
+      // Signal chain: Source -> HighPass (Sub-Bass Rumble & Hum Filter) -> Preamp -> Bass -> 10-Band EQ -> Treble -> AntiHiss -> Leveler -> Limiter -> Analyser -> Destination
       let node: AudioNode = this.sourceNode;
+      node.connect(this.highPassFilter);
+      node = this.highPassFilter;
+
       node.connect(this.preampNode);
       node = this.preampNode;
 
@@ -290,7 +326,8 @@ export class AutoMusicAudioEngine {
       }
 
       node.connect(this.trebleFilter);
-      this.trebleFilter.connect(this.compressor);
+      this.trebleFilter.connect(antiHissFilter);
+      antiHissFilter.connect(this.compressor);
       this.compressor.connect(this.limiter);
       this.limiter.connect(this.analyser);
       this.analyser.connect(this.ctx.destination);
@@ -445,6 +482,152 @@ export class AutoMusicAudioEngine {
       }
     };
     this.fadeFrameId = requestAnimationFrame(step);
+  }
+
+  /**
+   * Status of the high-pass filter.
+   */
+  get isHighPassActive(): boolean {
+    return Boolean(this.highPassFilter && this.dspConnected);
+  }
+
+  /**
+   * Adjusts the high-pass filter cutoff frequency (default 28 Hz).
+   * Eliminates sub-audible DC rumble, turntable motor noise, and 50Hz/60Hz AC electrical hum harmonics.
+   */
+  setHighPassCutoff(frequencyHz: number): void {
+    if (this.highPassFilter && this.ctx) {
+      const clamped = Math.max(10, Math.min(80, frequencyHz));
+      this.highPassFilter.frequency.setTargetAtTime(clamped, this.ctx.currentTime, 0.04);
+    }
+  }
+
+  /**
+   * Registers a listener to react to buffer refill state changes (buffering true/false).
+   */
+  setBufferingListener(listener: ((buffering: boolean) => void) | null): void {
+    this.onBufferingChange = listener;
+  }
+
+  /**
+   * Calculates how many seconds of audio are currently buffered ahead of the playback position.
+   */
+  getBufferedAheadSeconds(): number {
+    const cur = this.audioEl.currentTime;
+    const buffered = this.audioEl.buffered;
+    for (let i = 0; i < buffered.length; i++) {
+      const start = buffered.start(i);
+      const end = buffered.end(i);
+      if (start <= cur + 0.15 && cur <= end) {
+        return Math.max(0, end - cur);
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Pre-fills the audio buffer ahead of starting playback to prevent initial stuttering.
+   */
+  async waitForBufferRefill(targetSeconds = 1.8, maxTimeoutMs = 4000): Promise<boolean> {
+    if (!this.audioEl.src || this.audioEl.src.startsWith('blob:')) {
+      return true; // Local / offline blobs are already complete
+    }
+
+    const duration = Number.isFinite(this.audioEl.duration) ? this.audioEl.duration : 0;
+    const cur = this.audioEl.currentTime;
+    const remaining = duration > cur ? duration - cur : 10;
+    const requiredBuffer = Math.min(targetSeconds, remaining);
+
+    if (this.getBufferedAheadSeconds() >= requiredBuffer) {
+      return true;
+    }
+
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+
+      const cleanup = () => {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        if (checkInterval) window.clearInterval(checkInterval);
+        this.audioEl.removeEventListener('canplaythrough', onCanPlayThrough);
+        this.audioEl.removeEventListener('progress', onProgress);
+      };
+
+      const finish = (ok: boolean) => {
+        if (!settled) {
+          settled = true;
+          cleanup();
+          resolve(ok);
+        }
+      };
+
+      const onCanPlayThrough = () => finish(true);
+      const onProgress = () => {
+        if (this.getBufferedAheadSeconds() >= requiredBuffer) {
+          finish(true);
+        }
+      };
+
+      const checkInterval = window.setInterval(() => {
+        if (this.getBufferedAheadSeconds() >= requiredBuffer) {
+          finish(true);
+        }
+      }, 100);
+
+      this.audioEl.addEventListener('canplaythrough', onCanPlayThrough);
+      this.audioEl.addEventListener('progress', onProgress);
+
+      const timeoutId = window.setTimeout(() => {
+        finish(this.getBufferedAheadSeconds() > 0.4 || this.audioEl.readyState >= 2);
+      }, maxTimeoutMs);
+    });
+  }
+
+  /**
+   * Intelligent buffer re-filling logic:
+   * When network lag causes playback to stall ('waiting' or 'stalled'),
+   * this pauses audio output temporarily to accumulate a safe buffer cushion (target 2.5s),
+   * preventing audio hardware crackle and stutter, then smoothly resumes playback.
+   */
+  handlePlaybackStall(targetBufferSeconds = 2.5): void {
+    if (this.rebuffering) return;
+    if (!this.audioEl.src || this.audioEl.src.startsWith('blob:')) return;
+
+    this.rebuffering = true;
+    this.onBufferingChange?.(true);
+
+    const wasPlaying = !this.audioEl.paused;
+    if (wasPlaying) {
+      this.audioEl.pause();
+    }
+
+    const startTime = Date.now();
+    const duration = Number.isFinite(this.audioEl.duration) ? this.audioEl.duration : 0;
+    const cur = this.audioEl.currentTime;
+    const remaining = duration > cur ? duration - cur : 10;
+    const requiredBuffer = Math.min(targetBufferSeconds, remaining);
+
+    const checkRefill = () => {
+      const ahead = this.getBufferedAheadSeconds();
+      const elapsed = Date.now() - startTime;
+      const isRefilled = ahead >= requiredBuffer || this.audioEl.readyState >= 4;
+
+      if (isRefilled || elapsed >= 5000) {
+        this.rebuffering = false;
+        this.onBufferingChange?.(false);
+        if (this.rebufferingTimer !== null) {
+          window.clearTimeout(this.rebufferingTimer);
+          this.rebufferingTimer = null;
+        }
+
+        if (wasPlaying) {
+          void this.audioEl.play().catch(() => {});
+        }
+      } else {
+        this.rebufferingTimer = window.setTimeout(checkRefill, 120);
+      }
+    };
+
+    checkRefill();
   }
 }
 

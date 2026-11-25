@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   Trash2,
   Upload,
+  Waves,
 } from 'lucide-react';
 import { PWAInstallButton } from '../components/PWAInstallButton';
 import { TrackRow } from '../components/TrackRow';
@@ -562,6 +563,69 @@ export const AudioSettingsScreen: React.FC = () => {
             checked={eqSettings.volumeLeveler}
             onChange={(v) => updateEqSettings({ volumeLeveler: v })}
           />
+        </div>
+      </section>
+
+      {/* Real-time DSP Acoustic Filters & Flow Stability */}
+      <section className="p-5 sm:p-6 rounded-3xl bg-[#121216] border border-white/[0.07] space-y-4">
+        <div className="flex items-center gap-2.5">
+          <Waves className="w-5 h-5 text-[#D4AF37]" />
+          <div>
+            <h2 className="text-base font-semibold text-[#F5F2EB]">Dahili DSP Filtreleri ve Kesintisiz Akış Motoru</h2>
+            <p className="text-xs text-[#9B978E]">
+              Doğrudan Web Audio API donanım hızlandırmalı ses işleme hattına entegre koruyucular
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+          <div className="p-4 rounded-2xl bg-[#0E0E12] border border-white/[0.06] space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#F5F2EB]">28 Hz Subsonik &amp; Uğultu (Hum) Filtresi</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30">
+                High-Pass Aktif
+              </span>
+            </div>
+            <p className="text-xs text-[#9B978E]">
+              Duyulamayan 28 Hz altı alt-frekans titreşimlerini, mikrofon dip gürültülerini ve 50/60 Hz şebeke uğultusunu temizler; bas seslerin netliğini korur.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#0E0E12] border border-white/[0.06] space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#F5F2EB]">Akıllı Tampon Yenileme (Buffer Cushion)</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30">
+                2.5s Güvenlik Payı
+              </span>
+            </div>
+            <p className="text-xs text-[#9B978E]">
+              Ağ dalgalanmalarında parçanın anlık takılmasını ve çıtırtısını engeller. 2.5 saniyelik güvenli tampon dolumu tamamlanana kadar oynatmayı yumuşakça korur.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#0E0E12] border border-white/[0.06] space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#F5F2EB]">18 kHz Anti-Hiss Filtresi</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                Low-Pass Aktif
+              </span>
+            </div>
+            <p className="text-xs text-[#9B978E]">
+              MP3 kodlamasından kaynaklı yüksek frekanslı dijital hışırtıları ve yapay parazitleri sese zarar vermeden şeffafça süzer.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#0E0E12] border border-white/[0.06] space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#F5F2EB]">Brickwall Anti-Clipping Sınırlayıcı</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                -0.4 dB Tavan
+              </span>
+            </div>
+            <p className="text-xs text-[#9B978E]">
+              Yüksek bas ve preamp kullanımlarında sinyalin 0 dB&apos;yi aşarak hoparlörde veya kulaklıkta patlama/çatlama yapmasını matematiksel olarak engeller.
+            </p>
+          </div>
         </div>
       </section>
 

@@ -959,7 +959,7 @@ export const SearchScreen: React.FC = () => {
             </section>
           )}
 
-          {/* Group 2: Kariler */}
+          {/* Group 2: Kâriler */}
           {matchedReciters.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-base font-semibold text-[#D4AF37]">Kâriler ({matchedReciters.length})</h2>

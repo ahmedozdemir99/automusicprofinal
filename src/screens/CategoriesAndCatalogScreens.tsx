@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
+  ChevronUp,
   Heart,
   Layers,
   ListMusic,
@@ -31,9 +33,20 @@ import { ArtistSummary, MediaItem } from '../types/media';
 // Screen 2: Müzik Kategorileri (All 17 + Multi-Category Joint Playlist + Add Category)
 // ============================================================
 export const CategoriesScreen: React.FC = () => {
-  const { categories, addCategory, navigate, loadCategoryTracks, createPlaylist, showToast } = useAutoMusic();
+  const {
+    categories,
+    addCategory,
+    navigate,
+    loadCategoryTracks,
+    catalogTracksByCategory,
+    loadingCategories,
+    playQueue,
+    createPlaylist,
+    showToast,
+  } = useAutoMusic();
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newSubtitle, setNewSubtitle] = useState('');
@@ -42,6 +55,17 @@ export const CategoriesScreen: React.FC = () => {
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleToggleAccordion = async (catId: string, isQuran?: boolean) => {
+    if (expandedCategoryId === catId) {
+      setExpandedCategoryId(null);
+      return;
+    }
+    setExpandedCategoryId(catId);
+    if (!isQuran && !catalogTracksByCategory[catId]) {
+      await loadCategoryTracks(catId);
+    }
   };
 
   const handleCreateCombinedPlaylist = async () => {
@@ -183,50 +207,151 @@ export const CategoriesScreen: React.FC = () => {
         </form>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((cat) => {
           const isSelected = selectedIds.includes(cat.id);
+          const isExpanded = expandedCategoryId === cat.id;
+          const catTracks = cat.isQuran
+            ? SURAHS.slice(0, 16).map((s) => buildSurahMediaItem(s, RECITERS[0]))
+            : catalogTracksByCategory[cat.id] ?? [];
+          const isLoading = Boolean(loadingCategories[cat.id]);
+
           return (
-            <button
+            <div
               key={cat.id}
-              type="button"
-              onClick={() => {
-                if (multiSelectMode) {
-                  toggleSelect(cat.id);
-                } else if (cat.isQuran) {
-                  navigate({ name: 'quran' });
-                } else {
-                  navigate({ name: 'track_list', categoryId: cat.id, title: cat.name });
-                }
-              }}
-              className={`group h-full p-4 rounded-2xl border text-left transition-colors flex items-center gap-4 ${
+              className={`rounded-2xl border transition-all ${
                 isSelected
                   ? 'bg-[#1D1A10] border-[#D4AF37]'
-                  : 'bg-[#121216] hover:bg-[#19181F] border-white/[0.06] hover:border-[#D4AF37]/30'
+                  : isExpanded
+                  ? 'bg-[#15141A] border-[#D4AF37]/50 shadow-lg'
+                  : 'bg-[#121216] border-white/[0.06] hover:border-[#D4AF37]/30'
               }`}
             >
-              <ArtworkCover motif={cat.motif} size="md" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-mono tabular-nums text-[#D4AF37]">
-                    {String(cat.order).padStart(2, '0')}
-                  </span>
-                  {multiSelectMode ? (
-                    <span
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                        isSelected ? 'bg-[#D4AF37] border-[#D4AF37] text-[#09090B]' : 'border-white/25'
+              <div className="p-4 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (multiSelectMode) {
+                      toggleSelect(cat.id);
+                    } else {
+                      void handleToggleAccordion(cat.id, cat.isQuran);
+                    }
+                  }}
+                  className="flex items-center gap-3.5 min-w-0 text-left flex-1"
+                >
+                  <ArtworkCover motif={cat.motif} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-mono tabular-nums text-[#D4AF37]">
+                        {String(cat.order).padStart(2, '0')}
+                      </span>
+                      {multiSelectMode ? (
+                        <span
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                            isSelected ? 'bg-[#D4AF37] border-[#D4AF37] text-[#09090B]' : 'border-white/25'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5" />}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-[#7C7970] truncate">{cat.language}</span>
+                      )}
+                    </div>
+                    <p className="text-base font-semibold text-[#F5F2EB] truncate mt-0.5">{cat.name}</p>
+                    <p className="text-xs text-[#9B978E] truncate mt-0.5">{cat.subtitle}</p>
+                  </div>
+                </button>
+
+                {!multiSelectMode && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleAccordion(cat.id, cat.isQuran)}
+                      className={`h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+                        isExpanded
+                          ? 'bg-[#D4AF37] text-[#09090B]'
+                          : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#D4AF37]'
                       }`}
+                      title={isExpanded ? 'Akordion Kapat' : 'Akordion Aç'}
                     >
-                      {isSelected && <Check className="w-3.5 h-3.5" />}
-                    </span>
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="w-3.5 h-3.5" />
+                          <span className="hidden xs:inline">Kapat</span>
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3.5 h-3.5" />
+                          <span className="hidden xs:inline">Şarkılar</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (cat.isQuran) navigate({ name: 'quran' });
+                        else navigate({ name: 'track_list', categoryId: cat.id, title: cat.name });
+                      }}
+                      className="h-8 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#F5F2EB] transition-colors"
+                      title="Detay Sayfası"
+                    >
+                      Detay
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Accordion Inline Drawer */}
+              {isExpanded && !multiSelectMode && (
+                <div className="px-4 pb-4 pt-2 border-t border-white/[0.06] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-[#D4AF37] font-medium">
+                      {cat.name} {cat.isQuran ? 'Örnek Sureler' : 'Kayıtları'} ({catTracks.length})
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={catTracks.length === 0}
+                        onClick={() => void playQueue(catTracks, false)}
+                        className="h-7 px-2.5 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] disabled:opacity-40 text-[#09090B] text-xs font-semibold flex items-center gap-1"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        Sıralı
+                      </button>
+                      <button
+                        type="button"
+                        disabled={catTracks.length === 0}
+                        onClick={() => void playQueue(catTracks, true)}
+                        className="h-7 px-2.5 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-40 text-[#F5F2EB] text-xs font-medium flex items-center gap-1"
+                      >
+                        <Shuffle className="w-3 h-3 text-[#D4AF37]" />
+                        Karışık
+                      </button>
+                    </div>
+                  </div>
+
+                  {isLoading ? (
+                    <div className="p-4 flex items-center justify-center gap-2 text-xs text-[#9B978E]">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#D4AF37]" />
+                      Parçalar yükleniyor...
+                    </div>
+                  ) : catTracks.length === 0 ? (
+                    <p className="p-3 text-center text-xs text-[#8C887F]">Bu kategori için kayıt bulunamadı.</p>
                   ) : (
-                    <span className="text-[11px] text-[#7C7970] truncate">{cat.language}</span>
+                    <div className="max-h-72 overflow-y-auto bg-[#0C0C0F] rounded-xl p-1 divide-y divide-white/[0.04]">
+                      {catTracks.slice(0, 16).map((item, idx) => (
+                        <TrackRow
+                          key={item.contentId}
+                          item={item}
+                          index={idx}
+                          queueContext={catTracks}
+                        />
+                      ))}
+                    </div>
                   )}
                 </div>
-                <p className="text-base font-semibold text-[#F5F2EB] truncate mt-0.5">{cat.name}</p>
-                <p className="text-xs text-[#9B978E] truncate mt-0.5">{cat.subtitle}</p>
-              </div>
-            </button>
+              )}
+            </div>
           );
         })}
       </div>
@@ -493,7 +618,7 @@ export const ArtistDetailScreen: React.FC<{ artistId: string }> = ({ artistId })
       <div className="p-6 rounded-3xl bg-[#121216] border border-white/[0.07] flex flex-col sm:flex-row items-start sm:items-center gap-6">
         <ArtworkCover motif={motif} arabicTitle={reciter?.nameAr} size="lg" />
         <div className="space-y-3 flex-1 min-w-0">
-          <p className="text-xs text-[#D4AF37]">{reciter ? "Kur'an-ı Kerim Karisi" : 'Sanatçı'}</p>
+          <p className="text-xs text-[#D4AF37]">{reciter ? "Kur'an-ı Kerim Kârisi" : 'Sanatçı'}</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">{artistName}</h1>
           <p className="text-sm text-[#9B978E]">
             {tracks.length} kayıt{reciter ? ` · ${reciter.style} · ${reciter.country}` : ''}
