@@ -211,6 +211,9 @@ interface AutoMusicContextValue {
   toggleShuffle: () => void;
   cycleRepeatMode: () => void;
   jumpToQueueIndex: (idx: number) => Promise<void>;
+  hiddenMusicIds: string[];
+  hideMusic: (item: MediaItem) => void;
+  restoreHiddenMusic: () => void;
   removeFromQueue: (idx: number) => void;
   moveQueueItem: (fromIdx: number, toIdx: number) => void;
   addToQueueNext: (item: MediaItem) => void;
@@ -388,6 +391,8 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const hatimReciterRef = useRef('');
   useEffect(() => { try { localStorage.setItem('amp_hatim_v1', JSON.stringify(hatimPoint)); } catch {} }, [hatimPoint]);
   const lastMusic = useMemo(() => readJson<{ item: MediaItem; positionSec: number } | null>('amp_last_music_v1', null), []);
+  const [hiddenMusicIds, setHiddenMusicIds] = useState<string[]>(() => readJson('amp_hidden_music_v1', []));
+  useEffect(() => { try { localStorage.setItem('amp_hidden_music_v1', JSON.stringify(hiddenMusicIds)); } catch {} }, [hiddenMusicIds]);
   // Playback
   const [queue, setQueue] = useState<MediaItem[]>(() =>
     lastMusic?.item && !lastMusic.item.isLocalFile ? [healMediaItem(lastMusic.item)] : quranRepository.getSurahTracksForReciter(RECITERS[0].id).slice(0, 10)
@@ -1384,7 +1389,8 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     async (rawItem: MediaItem, newQueue?: MediaItem[], startFromZero = false) => {
       hatimActiveRef.current = false;
       const item = healMediaItem(rawItem);
-      const healedQueue = newQueue?.map(healMediaItem);
+      if (hiddenMusicIds.includes(item.contentId)) return;
+      const healedQueue = newQueue?.map(healMediaItem).filter(t => !hiddenMusicIds.includes(t.contentId));
 
       if (healedQueue && healedQueue.length > 0) {
         const idx = healedQueue.findIndex((t) => t.contentId === item.contentId);
@@ -1406,7 +1412,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       }
       await loadAndPlayItem(item, startFromZero);
     },
-    [loadAndPlayItem, queue]
+    [loadAndPlayItem, queue, hiddenMusicIds]
   );
 
   const playQueue = useCallback(
@@ -1416,14 +1422,15 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         showToast('Bu listede oynatılacak parça bulunmuyor.');
         return;
       }
-      const healed = items.map(healMediaItem);
+      const healed = items.map(healMediaItem).filter(t => !hiddenMusicIds.includes(t.contentId));
+      if (!healed.length) return;
       setShuffle(shuffleStart);
       const startIndex = shuffleStart ? Math.floor(Math.random() * healed.length) : 0;
       setQueue(healed);
       setCurrentIndex(startIndex);
       await loadAndPlayItem(healed[startIndex], false);
     },
-    [loadAndPlayItem, showToast]
+    [loadAndPlayItem, showToast, hiddenMusicIds]
   );
 
   const startHatim = useCallback(async () => {
@@ -1599,6 +1606,16 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     [loadAndPlayItem, queue]
   );
 
+  const hideMusic = useCallback((item: MediaItem) => {
+    if (item.categoryId === 'kuran') return;
+    setHiddenMusicIds(prev => prev.includes(item.contentId) ? prev : [...prev, item.contentId]);
+    const remaining = queue.filter(t => t.contentId !== item.contentId);
+    if (currentTrack?.contentId === item.contentId) { sharedAudioEngine.element.pause(); setIsPlaying(false); setCurrentIndex(-1); try { localStorage.removeItem('amp_last_music_v1'); } catch {} }
+    else if (currentTrack) setCurrentIndex(remaining.findIndex(t => t.contentId === currentTrack.contentId));
+    setQueue(remaining);
+    showToast('Müzik gizlendi. Kaynak arşiv korundu.');
+  }, [queue, currentTrack, showToast]);
+  const restoreHiddenMusic = useCallback(() => { setHiddenMusicIds([]); showToast('Gizlenen müzikler geri getirildi.'); }, [showToast]);
   const removeFromQueue = useCallback(
     (idx: number) => {
       if (idx < 0 || idx >= queue.length || idx === currentIndex) return;
@@ -2357,6 +2374,9 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     toggleShuffle,
     cycleRepeatMode,
     jumpToQueueIndex,
+    hiddenMusicIds,
+    hideMusic,
+    restoreHiddenMusic,
     removeFromQueue,
     moveQueueItem,
     addToQueueNext,
