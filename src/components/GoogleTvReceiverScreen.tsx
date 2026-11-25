@@ -209,10 +209,10 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       } else if (e.key === 'MediaPlayPause' || (e.key === ' ' && (e.target as HTMLElement)?.tagName !== 'BUTTON')) {
         e.preventDefault();
         clientRef.current?.sendCommand({ action: 'toggle' });
-      } else if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext') {
+      } else if (e.key === 'MediaTrackNext') {
         e.preventDefault();
         clientRef.current?.sendCommand({ action: 'next' });
-      } else if (e.key === 'ArrowLeft' || e.key === 'MediaTrackPrevious') {
+      } else if (e.key === 'MediaTrackPrevious') {
         e.preventDefault();
         clientRef.current?.sendCommand({ action: 'prev' });
       }
@@ -301,15 +301,15 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       </header>
 
       {/* Center Stage */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-6 sm:px-12 py-8">
+      <main className="relative z-10 flex-1 flex items-center justify-center px-3 sm:px-8 py-3">
         {!track ? (
-          <div className="max-w-3xl w-full text-center space-y-8">
+          <div className="max-w-[min(90vw,110rem)] w-full text-center space-y-4">
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-xs text-[#CFCBC2]">
                 <Wifi className="w-3.5 h-3.5 text-[#D4AF37]" />
                 YouTube TV Eşleştirme Mantığı ile Anında Bağlanın
               </div>
-              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#F5F2EB]">
+              <h1 className="text-[clamp(1.5rem,3vw,4.5rem)] font-bold tracking-tight text-[#F5F2EB]">
                 Google TV Kodunuz
               </h1>
               <p className="text-sm sm:text-base text-[#A19E95] max-w-xl mx-auto">
@@ -319,7 +319,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
             </div>
 
             <div className="inline-flex flex-col items-center gap-3 px-5 sm:px-10 py-4 rounded-3xl bg-[#121217]/95 border border-[#D4AF37]/40 shadow-2xl">
-              <span className="font-mono text-5xl sm:text-7xl font-extrabold tracking-[0.22em] text-[#E5C158]">
+              <span className="font-mono text-[clamp(2.5rem,6vw,7rem)] font-extrabold tracking-[0.22em] text-[#E5C158]">
                 {tvCode ? formatTvCode(tvCode) : '------'}
               </span>
               {wsStatus && (
@@ -349,7 +349,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-8 items-center">
+          <div className="max-w-[min(94vw,140rem)] w-full grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-8 items-center">
             <div className="md:col-span-5 flex justify-center">
               <ArtworkCover
                 motif={track.motif}
@@ -381,7 +381,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
                     {track.arabicTitle}
                   </p>
                 )}
-                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#F5F2EB] leading-tight">
+                <h1 className="text-[clamp(1.5rem,3vw,4.5rem)] font-bold tracking-tight text-[#F5F2EB] leading-tight">
                   {track.title}
                 </h1>
                 <p className="text-lg sm:text-2xl text-[#B8B3A8]">
@@ -432,7 +432,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
               </div>
 
               {/* TV Remote Friendly Controls */}
-              <div className="flex items-center justify-center md:justify-start gap-4">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                 <button
                   type="button"
                   onClick={() => clientRef.current?.sendCommand({ action: 'prev' })}
