@@ -39,6 +39,9 @@ export const GoogleTvReceiverScreen: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const loadedTrackIdRef = useRef<string | null>(null);
   const lastSeekNonceRef = useRef<number | undefined>(undefined);
+  const lastTelemetryRef = useRef(0);
+  const playButtonRef = useRef<HTMLButtonElement | null>(null);
+  const exitButtonRef = useRef<HTMLButtonElement | null>(null);
   const usedFallbackRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -65,6 +68,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       },
       onPresence: (controllers) => {
         setControllerCount(controllers);
+        if (controllers === 0) { audioRef.current?.pause(); setCastState(null); }
       },
       onState: (nextState) => {
         setCastState(nextState);
@@ -104,6 +108,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
 
     if (trackChanged) {
       loadedTrackIdRef.current = track.contentId;
+      lastSeekNonceRef.current = castState.seekNonce;
       usedFallbackRef.current = false;
       setAudioError('');
       setNeedsAudioUnlock(false);
@@ -121,7 +126,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       audioEl.currentTime = Math.max(0, castState.positionSec || 0);
     }
 
-    if (castState.isPlaying) {
+    if (castState.isPlaying && audioEl.paused) {
       void audioEl
         .play()
         .then(() => {
@@ -132,7 +137,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
           setNeedsAudioUnlock(true);
           if (err?.name !== 'NotAllowedError') setAudioError('TV sesi başlatılamadı. Tekrar deneyin.');
         });
-    } else {
+    } else if (!castState.isPlaying) {
       audioEl.pause();
     }
   }, [castState]);
@@ -143,6 +148,9 @@ export const GoogleTvReceiverScreen: React.FC = () => {
     if (!audioEl) return;
 
     const pushTelemetry = () => {
+      const now = Date.now();
+      if (now - lastTelemetryRef.current < 900) return;
+      lastTelemetryRef.current = now;
       const cur = audioEl.currentTime || 0;
       const dur = Number.isFinite(audioEl.duration) ? audioEl.duration : 0;
       setAudioCurrentTime(cur);
@@ -181,9 +189,9 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       if (!audioEl.paused) {
         pushTelemetry();
       }
-    }, 800);
+    }, 1000);
 
-    audioEl.addEventListener('timeupdate', pushTelemetry);
+    audioEl.addEventListener('playing', pushTelemetry);
     audioEl.addEventListener('durationchange', pushTelemetry);
     audioEl.addEventListener('play', pushTelemetry);
     audioEl.addEventListener('pause', pushTelemetry);
@@ -192,7 +200,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
 
     return () => {
       window.clearInterval(telemetryInterval);
-      audioEl.removeEventListener('timeupdate', pushTelemetry);
+      audioEl.removeEventListener('playing', pushTelemetry);
       audioEl.removeEventListener('durationchange', pushTelemetry);
       audioEl.removeEventListener('play', pushTelemetry);
       audioEl.removeEventListener('pause', pushTelemetry);
@@ -204,7 +212,15 @@ export const GoogleTvReceiverScreen: React.FC = () => {
   // TV Remote / Keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.repeat) return;
+      if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) {
+        const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tv-root] button:not(:disabled)'));
+        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        if (buttons.length) { e.preventDefault(); buttons[index < 0 ? 0 : (index + (e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1) + buttons.length) % buttons.length].focus(); }
+        return;
+      }
+      if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack') {
+        e.preventDefault();
         exitTvReceiverMode();
       } else if (e.key === 'MediaPlayPause' || (e.key === ' ' && (e.target as HTMLElement)?.tagName !== 'BUTTON')) {
         e.preventDefault();
@@ -233,12 +249,13 @@ export const GoogleTvReceiverScreen: React.FC = () => {
   };
 
   const track = castState?.track ?? null;
+  useEffect(() => { (track ? playButtonRef.current : exitButtonRef.current)?.focus(); }, [Boolean(track)]);
   const effectiveDuration = audioDuration > 0 ? audioDuration : track?.durationSec ?? 0;
   const progressPct =
     effectiveDuration > 0 ? Math.min(100, (audioCurrentTime / effectiveDuration) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#070709] text-[#F5F2EB] flex flex-col justify-between overflow-y-auto overflow-x-hidden select-none">
+    <div data-tv-root className="fixed inset-0 z-50 bg-[#070709] text-[#F5F2EB] flex flex-col justify-between overflow-y-auto overflow-x-hidden select-none">
       <audio ref={audioRef} preload="auto" />
       {audioError && <p role="alert" className="relative z-20 px-3 py-2 text-center text-xs text-[#E5C158]">{audioError}</p>}
 
@@ -246,7 +263,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       {track?.coverUrl && (
         <div
           aria-hidden="true"
-          className="absolute inset-0 opacity-20 blur-3xl scale-110 bg-center bg-cover pointer-events-none"
+          className="absolute inset-0 opacity-10 bg-center bg-cover pointer-events-none"
           style={{ backgroundImage: `url(${track.coverUrl})` }}
         />
       )}
@@ -276,7 +293,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
           <div className="px-4 py-2 rounded-2xl bg-[#141419]/90 border border-white/10 flex items-center gap-3">
             <span
               className={`w-2.5 h-2.5 rounded-full ${
-                controllerCount > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                controllerCount > 0 ? 'bg-emerald-400' : 'bg-amber-400'
               }`}
             />
             <span className="text-xs sm:text-sm text-[#CFCBC2]">
@@ -291,6 +308,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
 
           <button
             type="button"
+            ref={exitButtonRef}
             onClick={exitTvReceiverMode}
             className="h-11 px-4 rounded-2xl bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 text-xs sm:text-sm font-semibold text-[#F5F2EB] inline-flex items-center gap-2 transition-colors"
           >
@@ -407,7 +425,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
                   <span
                     key={idx}
                     className={`w-1.5 rounded-full transition-all duration-300 ${
-                      localPlaying ? 'bg-[#D4AF37] animate-pulse' : 'bg-white/20'
+                      localPlaying ? 'bg-[#D4AF37]' : 'bg-white/20'
                     }`}
                     style={{
                       height: localPlaying ? `${Math.round(scale * 30)}px` : '6px',
@@ -437,15 +455,16 @@ export const GoogleTvReceiverScreen: React.FC = () => {
                   type="button"
                   onClick={() => clientRef.current?.sendCommand({ action: 'prev' })}
                   aria-label="Önceki parça"
-                  className="w-14 h-14 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] border border-white/10 flex items-center justify-center text-[#F5F2EB] transition-colors"
+                  className="focus-visible:ring-4 focus-visible:ring-[#D4AF37] w-14 h-14 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] border border-white/10 flex items-center justify-center text-[#F5F2EB] transition-colors"
                 >
                   <SkipBack className="w-6 h-6 fill-current" />
                 </button>
                 <button
                   type="button"
                   onClick={() => clientRef.current?.sendCommand({ action: 'toggle' })}
+                  ref={playButtonRef}
                   aria-label={localPlaying ? 'Duraklat' : 'Oynat'}
-                  className="w-16 h-16 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] flex items-center justify-center shadow-xl transition-transform active:scale-95"
+                  className="focus-visible:ring-4 focus-visible:ring-white w-16 h-16 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] flex items-center justify-center shadow-xl transition-transform active:scale-95"
                 >
                   {localPlaying ? (
                     <Pause className="w-7 h-7 fill-current" />
@@ -457,7 +476,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
                   type="button"
                   onClick={() => clientRef.current?.sendCommand({ action: 'next' })}
                   aria-label="Sonraki parça"
-                  className="w-14 h-14 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] border border-white/10 flex items-center justify-center text-[#F5F2EB] transition-colors"
+                  className="focus-visible:ring-4 focus-visible:ring-[#D4AF37] w-14 h-14 rounded-2xl bg-white/[0.08] hover:bg-white/[0.16] border border-white/10 flex items-center justify-center text-[#F5F2EB] transition-colors"
                 >
                   <SkipForward className="w-6 h-6 fill-current" />
                 </button>
@@ -469,7 +488,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
 
       {/* Bottom Hint Bar */}
       <footer className="relative z-10 px-3 sm:px-8 py-2 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs text-[#8C887F]">
-        <span>Kumanda Tuşları: Oynat/Duraklat (Space / OK) · Önceki/Sonraki (Sol/Sağ Ok)</span>
+        <span>Kumanda: Ok tuşları ile seçin · OK ile çalıştırın · Geri ile çıkın</span>
         <span>AutoMusic Pro 4 TV Receiver</span>
       </footer>
     </div>
