@@ -33,6 +33,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [localPlaying, setLocalPlaying] = useState<boolean>(false);
   const [needsAudioUnlock, setNeedsAudioUnlock] = useState<boolean>(false);
+  const [audioError, setAudioError] = useState('');
 
   const clientRef = useRef<TvCastReceiverClient | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -85,6 +86,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
     const audioEl = audioRef.current;
     if (!audioEl || !castState) return;
 
+    audioEl.muted = false;
     audioEl.volume = Math.max(0, Math.min(1, castState.volume ?? 0.9));
 
     const track = castState.track;
@@ -103,6 +105,8 @@ export const GoogleTvReceiverScreen: React.FC = () => {
     if (trackChanged) {
       loadedTrackIdRef.current = track.contentId;
       usedFallbackRef.current = false;
+      setAudioError('');
+      setNeedsAudioUnlock(false);
       audioEl.src = getProxiedAudioUrl(track.streamUrl);
       audioEl.load();
       if (castState.positionSec > 0.5) {
@@ -124,9 +128,9 @@ export const GoogleTvReceiverScreen: React.FC = () => {
           setNeedsAudioUnlock(false);
         })
         .catch((err) => {
-          if (err instanceof Error && err.name === 'NotAllowedError') {
-            setNeedsAudioUnlock(true);
-          }
+          if (err?.name === 'AbortError') return;
+          setNeedsAudioUnlock(true);
+          if (err?.name !== 'NotAllowedError') setAudioError('TV sesi başlatılamadı. Tekrar deneyin.');
         });
     } else {
       audioEl.pause();
@@ -160,10 +164,13 @@ export const GoogleTvReceiverScreen: React.FC = () => {
           audioEl.src = getProxiedAudioUrl(fallback);
           audioEl.load();
           if (castState?.isPlaying) {
-            void audioEl.play().catch(() => {});
+            void audioEl.play().catch(() => setNeedsAudioUnlock(true));
           }
+          return;
         }
       }
+      setAudioError('Ses kaynağı TV’de açılamadı.');
+      setNeedsAudioUnlock(true);
     };
 
     const onEnded = () => {
@@ -217,10 +224,12 @@ export const GoogleTvReceiverScreen: React.FC = () => {
   const handleUnlockAudio = () => {
     const audioEl = audioRef.current;
     if (!audioEl) return;
-    void audioEl
-      .play()
-      .then(() => setNeedsAudioUnlock(false))
-      .catch(() => {});
+    audioEl.muted = false;
+    if (audioEl.volume === 0) audioEl.volume = 0.8;
+    if (audioEl.error) audioEl.load();
+    void audioEl.play()
+      .then(() => { setNeedsAudioUnlock(false); setAudioError(''); })
+      .catch(() => { setNeedsAudioUnlock(true); setAudioError('TV sesi açılamadı. Ses kaynağını veya TV tarayıcısını kontrol edin.'); });
   };
 
   const track = castState?.track ?? null;
@@ -230,7 +239,8 @@ export const GoogleTvReceiverScreen: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-[#070709] text-[#F5F2EB] flex flex-col justify-between overflow-y-auto overflow-x-hidden select-none">
-      <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
+      <audio ref={audioRef} preload="auto" />
+      {audioError && <p role="alert" className="relative z-20 px-3 py-2 text-center text-xs text-[#E5C158]">{audioError}</p>}
 
       {/* Subtle Ambient Backdrop */}
       {track?.coverUrl && (
