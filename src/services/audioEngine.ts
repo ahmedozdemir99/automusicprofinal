@@ -297,9 +297,9 @@ export class AutoMusicAudioEngine {
       this.compressor.attack.value = 0.02;
       this.compressor.release.value = 0.28;
 
-      // Brickwall anti-clipping safety limiter (-0.4 dB ceiling to eliminate any digital clipping distortion)
+      // Fast peak compressor with extra headroom; not a true brickwall limiter.
       this.limiter = this.ctx.createDynamicsCompressor();
-      this.limiter.threshold.value = -0.4;
+      this.limiter.threshold.value = -2;
       this.limiter.knee.value = 2;
       this.limiter.ratio.value = 24;
       this.limiter.attack.value = 0.001;
@@ -364,7 +364,7 @@ export class AutoMusicAudioEngine {
           this.dspSupported = false;
           return false;
         }
-        this.ctx = new AudioCtx();
+        this.ctx = new AudioCtx({ latencyHint: 'playback' });
       }
       if (this.ctx.state === 'suspended') {
         await Promise.race([
@@ -399,8 +399,10 @@ export class AutoMusicAudioEngine {
     const peakBoostDb = active
       ? Math.max(0, ...settings.bandsDb, lowCumulative, midLowCumulative, highCumulative)
       : 0;
-    const autoHeadroomDb = active && peakBoostDb > 3 ? -(peakBoostDb - 3) * 0.45 : 0;
-    const totalPreampDb = active ? Math.max(-12, Math.min(10, settings.preampDb + autoHeadroomDb)) : 0;
+    // Reserve headroom for overlapping filters and positive preamp settings.
+    const totalPreampDb = active
+      ? Math.min(settings.preampDb, -peakBoostDb - 2)
+      : -1;
 
     if (this.preampNode) {
       this.preampNode.gain.setTargetAtTime(dbToLinear(totalPreampDb), now, 0.03);
@@ -512,7 +514,7 @@ export class AutoMusicAudioEngine {
       sampleRate: this.ctx?.sampleRate ?? 48000,
       highPassHz: this.highPassFilter?.frequency.value ?? 28,
       antiHissHz: 18200,
-      limiterThresholdDb: -0.4,
+      limiterThresholdDb: this.limiter?.threshold.value ?? -2,
       bufferedAheadSec: Math.round(this.getBufferedAheadSeconds() * 10) / 10,
     };
   }
