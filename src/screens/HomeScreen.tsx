@@ -44,14 +44,18 @@ export const HomeScreen: React.FC = () => {
   // One Spotify-style database curated playlist per key category for the home showcase
   const spotlightLists = useMemo(() => {
     const seen = new Set<string>();
-    return featuredPlaylistsSummary
+    const scores = new Map<string, number>();
+    recentlyPlayed.slice(0, 30).forEach((item, index) => {
+      if (item.categoryId !== 'kuran') scores.set(item.categoryId, (scores.get(item.categoryId) ?? 0) + (30 - index));
+    });
+    return [...featuredPlaylistsSummary].sort((a, b) => (scores.get(b.categoryId) ?? 0) - (scores.get(a.categoryId) ?? 0))
       .filter((p) => {
         if (seen.has(p.categoryId)) return false;
         seen.add(p.categoryId);
         return true;
       })
       .slice(0, 8);
-  }, [featuredPlaylistsSummary]);
+  }, [featuredPlaylistsSummary, recentlyPlayed]);
 
   return (
     <div className="space-y-10 pb-10">
@@ -153,7 +157,7 @@ export const HomeScreen: React.FC = () => {
       {/* Recently Played */}
       {recentlyPlayed.length > 0 && (
         <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-[#F5F2EB]">Son Dinlenenler</h2>
             <button
               type="button"
@@ -173,7 +177,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* Categories Preview Grid (All 17 with Bespoke Category Symbols) */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-[#F5F2EB]">Müzik Kategorileri</h2>
             <p className="text-xs text-[#9B978E] mt-0.5">
@@ -220,11 +224,11 @@ export const HomeScreen: React.FC = () => {
       {/* Spotify-style Database Curated Playlists Showcase */}
       {spotlightLists.length > 0 && (
         <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-[#F5F2EB]">Öne Çıkan Kategori Listeleri</h2>
+              <h2 className="text-xl font-semibold text-[#F5F2EB]">{recentlyPlayed.some((item) => item.categoryId !== 'kuran') ? 'Sana Özel Kategori Listeleri' : 'Öne Çıkan Kategori Listeleri'}</h2>
               <p className="text-xs text-[#9B978E] mt-0.5">
-                Veritabanından hazırlanan Türkçe ve seçkin kategori çalma listeleri
+                Dinleme geçmişine göre sıralanan seçkin kategori listeleri
               </p>
             </div>
             <button
@@ -266,7 +270,7 @@ export const HomeScreen: React.FC = () => {
       {/* Quran Quick Highlights & Personal Playlists Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <section className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-[#F5F2EB]">Kur'an-ı Kerim Seçkisi</h2>
               <p className="text-xs text-[#9B978E] mt-0.5">
@@ -302,7 +306,7 @@ export const HomeScreen: React.FC = () => {
         </section>
 
         <section className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-[#F5F2EB]">Çalma Listelerim</h2>
             <button
               type="button"
