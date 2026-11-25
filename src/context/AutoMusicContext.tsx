@@ -25,12 +25,17 @@ import {
   TvCastControllerClient,
   TvCastPlaybackState,
   connectBluetoothCarDevice,
+  ensureGoogleCastSdkLoaded,
   formatTvCode,
+  getAbsoluteArtworkUrl,
+  hasActiveGoogleCastSession,
   isAudioOutputPickerSupported,
   isRemotePlaybackSupported,
   isWebBluetoothSupported,
   promptNativeGoogleCast,
   selectBluetoothAudioOutput,
+  syncTrackToActiveGoogleCastSession,
+  watchRemotePlaybackState,
 } from '../services/deviceCastService';
 import {
   DeviceStorageEstimate,
@@ -287,6 +292,7 @@ interface AutoMusicContextValue {
   mutePhoneWhileCasting: boolean;
   setMutePhoneWhileCasting: (mute: boolean) => void;
   isRemoteCastSupported: boolean;
+  remotePlaybackState: 'connecting' | 'connected' | 'disconnected';
   connectToTvByCode: (code: string) => void;
   disconnectTvCast: () => void;
   triggerNativeGoogleCast: () => Promise<void>;
@@ -330,6 +336,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const [tvReceiverCount, setTvReceiverCount] = useState(0);
   const [tvCastError, setTvCastError] = useState<string | null>(null);
   const [mutePhoneWhileCasting, setMutePhoneWhileCasting] = useState(true);
+  const [remotePlaybackState, setRemotePlaybackState] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
 
   // Bluetooth Car connection state
   const [btConnected, setBtConnected] = useState(false);
@@ -1330,12 +1337,18 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         }));
 
         if ('mediaSession' in navigator) {
-          const artwork: MediaImage[] = item.coverUrl
-            ? [
-                { src: item.coverUrl, sizes: '256x256', type: 'image/jpeg' },
-                { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-              ]
-            : [{ src: '/pwa-512.png', sizes: '512x512', type: 'image/png' }];
+          const primaryArt = getAbsoluteArtworkUrl(item.coverUrl);
+          const fallbackArt =
+            typeof window !== 'undefined'
+              ? `${window.location.origin}/pwa-512x512.png`
+              : '/pwa-512x512.png';
+          const artwork: MediaImage[] =
+            primaryArt !== fallbackArt
+              ? [
+                  { src: primaryArt, sizes: '256x256', type: 'image/jpeg' },
+                  { src: fallbackArt, sizes: '512x512', type: 'image/png' },
+                ]
+              : [{ src: fallbackArt, sizes: '512x512', type: 'image/png' }];
           navigator.mediaSession.metadata = new MediaMetadata({
             title: item.title,
             artist: item.artistName,
@@ -1343,6 +1356,10 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
             artwork,
           });
           navigator.mediaSession.playbackState = 'playing';
+        }
+
+        if (hasActiveGoogleCastSession() && !item.isLocalFile) {
+          void syncTrackToActiveGoogleCastSession(item, 0, true);
         }
 
         if (!playingOffline && item.downloadAllowed && downloadSettings.autoSaveOnPlay) {
@@ -2209,12 +2226,19 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   );
 
   const triggerNativeGoogleCast = useCallback(async () => {
-    const res = await promptNativeGoogleCast(sharedAudioEngine.element);
+    const res = await promptNativeGoogleCast(
+      sharedAudioEngine.element,
+      currentTrack,
+      currentTime,
+      isPlaying
+    );
     if (!res.ok) {
       setTvCastError(res.message);
+    } else {
+      setTvCastError(null);
     }
     showToast(res.message);
-  }, [showToast]);
+  }, [currentTime, currentTrack, isPlaying, showToast]);
 
   const disconnectBluetoothCar = useCallback(() => {
     const dev = btDeviceRef.current;
@@ -2266,7 +2290,10 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   }, [showToast]);
 
   useEffect(() => {
+    ensureGoogleCastSdkLoaded();
+    const unwatch = watchRemotePlaybackState(sharedAudioEngine.element, setRemotePlaybackState);
     return () => {
+      unwatch();
       tvCastClientRef.current?.disconnect();
     };
   }, []);
@@ -2384,6 +2411,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     mutePhoneWhileCasting,
     setMutePhoneWhileCasting,
     isRemoteCastSupported,
+    remotePlaybackState,
     connectToTvByCode,
     disconnectTvCast,
     triggerNativeGoogleCast,

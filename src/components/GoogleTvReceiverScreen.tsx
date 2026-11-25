@@ -391,6 +391,22 @@ export const GoogleTvReceiverScreen: React.FC = () => {
                 </button>
               )}
 
+              {/* Live TV Spectrum Visualizer */}
+              <div className="flex items-end justify-center md:justify-start gap-1.5 h-8" aria-hidden="true">
+                {[0.45, 0.8, 0.6, 0.95, 0.5, 0.85, 0.7, 0.9, 0.55, 0.75, 0.4, 0.65].map((scale, idx) => (
+                  <span
+                    key={idx}
+                    className={`w-1.5 rounded-full transition-all duration-300 ${
+                      localPlaying ? 'bg-[#D4AF37] animate-pulse' : 'bg-white/20'
+                    }`}
+                    style={{
+                      height: localPlaying ? `${Math.round(scale * 30)}px` : '6px',
+                      animationDelay: `${idx * 90}ms`,
+                    }}
+                  />
+                ))}
+              </div>
+
               {/* TV Progress Bar */}
               <div className="space-y-2">
                 <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden">

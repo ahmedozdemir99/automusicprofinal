@@ -9,6 +9,7 @@ import {
   Copy,
   MonitorPlay,
   Radio,
+  Share2,
   Smartphone,
   Speaker,
   Tv,
@@ -32,6 +33,7 @@ export const ConnectDevicesModal: React.FC = () => {
     mutePhoneWhileCasting,
     setMutePhoneWhileCasting,
     isRemoteCastSupported,
+    remotePlaybackState,
     connectToTvByCode,
     disconnectTvCast,
     triggerNativeGoogleCast,
@@ -84,6 +86,22 @@ export const ConnectDevicesModal: React.FC = () => {
       setTimeout(() => setCopiedLink(false), 2000);
     } catch {
       // Clipboard blocked in some non-secure contexts
+    }
+  };
+
+  const handleShareTvUrl = async () => {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'AutoMusic Pro · Google TV Ekranı',
+          text: 'Google TV tarayıcısında açıp 6 haneli kodu telefonunuza girin:',
+          url: tvReceiverUrl,
+        });
+      } catch {
+        // User cancelled share sheet
+      }
+    } else {
+      await handleCopyTvUrl();
     }
   };
 
@@ -215,11 +233,11 @@ export const ConnectDevicesModal: React.FC = () => {
                 >
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-[#F5F2EB]">
-                      1. YouTube Tarzı TV Koduyla Eşleştir
+                      1. Tam Ekran Görüntü + Ses: YouTube TV Koduyla Eşleştir
                     </h3>
                     <p className="text-xs text-[#9B978E] leading-relaxed">
-                      Google TV tarayıcınızda Alıcı Ekranını açın ve TV’de görünen 6 haneli kodu
-                      aşağıya yazarak müziği ve Kur’an tilavetini TV ekranına aktarın.
+                      Google TV ekranında kapak görseli, şarkı/sure adı ve canlı oynatıcı görüntüsü için
+                      TV tarayıcınızdan Alıcı Ekranını açıp 6 haneli kodu buraya girin.
                     </p>
                   </div>
 
@@ -279,8 +297,8 @@ export const ConnectDevicesModal: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 rounded-xl bg-[#0D0D11] border border-white/10 text-xs font-mono text-[#E5E2D9] truncate">
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="flex-1 min-w-[180px] px-3 py-2 rounded-xl bg-[#0D0D11] border border-white/10 text-xs font-mono text-[#E5E2D9] truncate">
                     {tvReceiverUrl}
                   </code>
                   <button
@@ -300,37 +318,55 @@ export const ConnectDevicesModal: React.FC = () => {
                       </>
                     )}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleShareTvUrl()}
+                    className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-[#F5F2EB] inline-flex items-center gap-1.5 shrink-0"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    TV’ye Gönder
+                  </button>
                 </div>
                 <p className="text-[11px] text-[#8C887F] leading-relaxed">
                   Google TV’nizdeki tarayıcıdan (TV Bro, JioPages veya Chrome) bu adresi açtığınızda
                   ekranınızda büyük 6 haneli bir eşleştirme kodu görünür. Telefonunuzdan bu kodu
-                  girdiğinizde oynatma listesi ve ses anında TV’ye yansıtılır.
+                  girdiğinizde oynatma listesi, kapak görseli ve ses anında TV’ye yansıtılır.
                 </p>
               </div>
 
               {/* Native Wi-Fi Cast Option */}
-              <div className="p-4 rounded-2xl bg-[#16161C] border border-white/[0.07] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
-                    <Radio className="w-3.5 h-3.5 text-[#D4AF37]" />
-                    Doğrudan Wi-Fi Chromecast / Google Cast
-                  </p>
-                  <p className="text-[11px] text-[#8C887F]">
-                    {isRemoteCastSupported
-                      ? currentTrack
-                        ? 'Aynı Wi-Fi ağındaki Chromecast / Google TV cihazını tarayıcıdan seçin.'
-                        : 'Doğrudan Cast için önce bir parça başlatıp tekrar deneyebilirsiniz.'
-                      : 'Tarayıcınız doğrudan mDNS Cast penceresini desteklemiyor; yukarıdaki 6 haneli TV Kodu tüm Google TV’lerde çalışır.'}
-                  </p>
+              <div className="p-4 rounded-2xl bg-[#16161C] border border-white/[0.07] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#F5F2EB] flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-[#D4AF37]" />
+                      2. Doğrudan Wi-Fi Chromecast / Google Cast
+                    </p>
+                    <p className="text-[11px] text-[#8C887F] leading-relaxed">
+                      {isRemoteCastSupported
+                        ? currentTrack
+                          ? 'Destekleyen tarayıcılarda kapak ve parça bilgisini Cast eder; standart Chrome Remote Playback modunda ise yalnızca ses (Chrome simgesi) gönderilir.'
+                          : 'Doğrudan Cast için önce bir parça başlatıp tekrar deneyebilirsiniz.'
+                        : 'Tarayıcınız doğrudan mDNS Cast penceresini desteklemiyor; yukarıdaki 6 haneli TV Kodu tüm Google TV’lerde tam görüntülü çalışır.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void triggerNativeGoogleCast()}
+                    disabled={!isRemoteCastSupported}
+                    className="h-10 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] disabled:opacity-40 border border-white/10 text-xs font-semibold text-[#F5F2EB] whitespace-nowrap shrink-0"
+                  >
+                    Cihaz Seç
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void triggerNativeGoogleCast()}
-                  disabled={!isRemoteCastSupported}
-                  className="h-10 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] disabled:opacity-40 border border-white/10 text-xs font-semibold text-[#F5F2EB] whitespace-nowrap shrink-0"
-                >
-                  Cihaz Seç
-                </button>
+
+                {remotePlaybackState === 'connected' && (
+                  <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 leading-relaxed">
+                    Chrome Ses Cast şu an aktif: Tarayıcının bu yöntemi TV’ye yalnızca ses gönderdiği için TV’de
+                    sadece Chrome simgesi görünür. Tam TV ekranı ve kapak görseli için yukarıdaki{' '}
+                    <strong className="text-[#F5F2EB]">/?tv=1</strong> adresini Google TV’de açıp 6 haneli kodu girin.
+                  </p>
+                )}
               </div>
             </>
           ) : (
