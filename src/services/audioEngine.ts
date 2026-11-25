@@ -617,9 +617,7 @@ export class AutoMusicAudioEngine {
 
   /**
    * Intelligent buffer re-filling logic:
-   * When network lag causes playback to stall ('waiting' or 'stalled'),
-   * this pauses audio output temporarily to accumulate a safe buffer cushion (target 2.5s),
-   * preventing audio hardware crackle and stutter, then smoothly resumes playback.
+   * When playback stalls, monitor the native media buffer without forcing a pause/play cycle.
    */
   handlePlaybackStall(targetBufferSeconds = 2.5): void {
     if (this.rebuffering || this.audioEl.paused || this.audioEl.ended || this.audioEl.seeking) return;
@@ -628,36 +626,18 @@ export class AutoMusicAudioEngine {
     this.rebuffering = true;
     this.onBufferingChange?.(true);
 
-    const wasPlaying = !this.audioEl.paused;
-    if (wasPlaying) {
-      this.audioEl.pause();
-    }
-
+    // Let the media element recover naturally. Pausing here fires the application's
+    // pause handler, which cancels refill and can leave playback stopped.
     const startTime = Date.now();
-    const duration = Number.isFinite(this.audioEl.duration) ? this.audioEl.duration : 0;
-    const cur = this.audioEl.currentTime;
-    const remaining = duration > cur ? duration - cur : 10;
-    const requiredBuffer = Math.min(targetBufferSeconds, remaining);
-
     const checkRefill = () => {
-      const ahead = this.getBufferedAheadSeconds();
-      const elapsed = Date.now() - startTime;
-      const isRefilled = ahead >= requiredBuffer || this.audioEl.readyState >= 4;
-
-      if (isRefilled || elapsed >= 5000) {
-        this.rebuffering = false;
-        this.onBufferingChange?.(false);
-        if (this.rebufferingTimer !== null) {
-          window.clearTimeout(this.rebufferingTimer);
-          this.rebufferingTimer = null;
-        }
-
-        if (wasPlaying) {
-          void this.audioEl.play().catch(() => {});
-        }
-      } else {
-        this.rebufferingTimer = window.setTimeout(checkRefill, 120);
+      if (!this.rebuffering) return;
+      if (this.audioEl.paused || this.audioEl.ended ||
+          this.getBufferedAheadSeconds() >= targetBufferSeconds ||
+          this.audioEl.readyState >= 3 || Date.now() - startTime >= 5000) {
+        this.resetBufferingState();
+        return;
       }
+      this.rebufferingTimer = window.setTimeout(checkRefill, 200);
     };
 
     checkRefill();
