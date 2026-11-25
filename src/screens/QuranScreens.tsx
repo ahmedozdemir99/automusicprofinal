@@ -223,15 +223,15 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                       <button
                         type="button"
                         onClick={() => setExpandedReciterId(isExpanded ? null : rec.id)}
-                        className={`h-8 px-2 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+                        className={`h-8 min-w-[78px] px-2.5 rounded-lg text-xs font-medium inline-flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
                           isExpanded
                             ? 'bg-[#D4AF37] text-[#09090B]'
                             : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#D4AF37]'
                         }`}
                         title={isExpanded ? 'Akordion Kapat' : 'Sureleri Göster (Akordion)'}
                       >
-                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        <span className="hidden xs:inline">Sureler</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
+                        <span>Sureler</span>
                       </button>
 
                       <button
@@ -503,13 +503,13 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 pt-1">
                       <button
                         type="button"
                         onClick={() => void playTrack(mediaItem, allSurahItems)}
-                        className="h-8 px-3 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                        className="h-9 px-3 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
                       >
-                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <Play className="w-3.5 h-3.5 fill-current shrink-0" />
                         Tam Sureyi Başlat
                       </button>
 
@@ -522,18 +522,18 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
                             reciterId: activeReciter.id,
                           })
                         }
-                        className="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[#F5F2EB] text-xs font-medium flex items-center gap-1.5 transition-colors"
+                        className="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[#F5F2EB] text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
                       >
-                        <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <BookOpen className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
                         Ayet Ayet Dinle & Meali Gör
                       </button>
 
                       <button
                         type="button"
                         onClick={() => void triggerDownload(mediaItem, true)}
-                        className="h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-[#CFCBC2] text-xs font-medium flex items-center gap-1.5 transition-colors"
+                        className="h-9 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-[#CFCBC2] text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
                       >
-                        <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <Download className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
                         {isDownloaded ? 'Arşivde Kayıtlı' : 'Çevrimdışı İndir'}
                       </button>
                     </div>
@@ -644,7 +644,7 @@ export const SurahDetailScreen: React.FC<{ surahNumber: number; reciterId: strin
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:flex items-center gap-2.5 shrink-0">
+        <div className="grid grid-cols-1 sm:flex items-stretch sm:items-center gap-2.5 shrink-0 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => void playTrack(fullSurahItem)}

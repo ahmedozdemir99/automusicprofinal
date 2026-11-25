@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Bluetooth,
   BookOpen,
   Clock,
   Disc3,
@@ -30,6 +31,11 @@ type AutoSection = 'categories' | 'artists' | 'favorites' | 'playlists' | 'quran
 export const AndroidAutoMode: React.FC = () => {
   const {
     setCarMode,
+    dayMode,
+    toggleDayMode,
+    openConnectModal,
+    btConnected,
+    btDeviceName,
     categories,
     catalogTracksByCategory,
     loadCategoryTracks,
@@ -58,7 +64,6 @@ export const AndroidAutoMode: React.FC = () => {
 
   const [section, setSection] = useState<AutoSection>('categories');
   const [statusNote, setStatusNote] = useState<string | null>(null);
-  const [dayMode, setDayMode] = useState(false);
 
   const selectedReciter = useMemo(
     () => RECITERS.find((r) => r.id === selectedReciterId) ?? RECITERS[0],
@@ -119,6 +124,19 @@ export const AndroidAutoMode: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => openConnectModal('bluetooth')}
+            className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap ${
+              btConnected
+                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                : btnSecondary
+            }`}
+          >
+            <Bluetooth className={`w-4 h-4 shrink-0 ${btConnected ? 'text-emerald-400' : dayMode ? 'text-[#8C6D14]' : 'text-[#D4AF37]'}`} />
+            <span className="hidden sm:inline">{btConnected ? btDeviceName || 'Bluetooth Bağlı' : 'Bluetooth'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => applyEqPreset(isCarEqActive ? 'flat' : 'car')}
             className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap ${
               isCarEqActive
@@ -132,7 +150,7 @@ export const AndroidAutoMode: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setDayMode((d) => !d)}
+            onClick={toggleDayMode}
             aria-label={dayMode ? 'Gece moduna geç' : 'Gündüz moduna geç'}
             className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap ${btnSecondary}`}
           >
@@ -155,26 +173,46 @@ export const AndroidAutoMode: React.FC = () => {
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12">
         {/* Left Navigation Rail (Large Touch Targets) */}
         <aside className={`md:col-span-3 border-b md:border-b-0 md:border-r p-3 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto ${bgHeader}`}>
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setSection(item.id);
-                setStatusNote(null);
-              }}
-              className={`min-h-[56px] px-4 rounded-2xl flex items-center gap-3 text-left text-base font-medium whitespace-nowrap transition-colors shrink-0 ${
-                section === item.id
-                  ? 'bg-[#D4AF37] text-[#09090B]'
-                  : dayMode
-                    ? 'bg-white text-[#141310] hover:bg-[#FAF6EC] border border-[#141310]/10'
-                    : 'bg-[#14141A] text-[#E5E2D9] hover:bg-[#1D1D25]'
-              }`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const isQuran = item.id === 'quran';
+            const isSelected = section === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setSection(item.id);
+                  setStatusNote(null);
+                }}
+                className={`min-h-[56px] px-4 rounded-2xl flex items-center gap-3 text-left text-base font-medium whitespace-nowrap transition-colors shrink-0 ${
+                  isQuran
+                    ? `quran-btn-blink border ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-400'
+                          : dayMode
+                          ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-600/50 text-emerald-800'
+                          : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/60 text-emerald-300'
+                      }`
+                    : isSelected
+                    ? 'bg-[#D4AF37] text-[#09090B]'
+                    : dayMode
+                      ? 'bg-white text-[#141310] hover:bg-[#FAF6EC] border border-[#141310]/10'
+                      : 'bg-[#14141A] text-[#E5E2D9] hover:bg-[#1D1D25]'
+                }`}
+              >
+                {item.icon}
+                <span className="flex-1">{item.label}</span>
+                {isQuran && (
+                  <span
+                    aria-hidden="true"
+                    className={`w-2.5 h-2.5 rounded-full animate-pulse shrink-0 ${
+                      isSelected ? 'bg-white' : 'bg-emerald-400'
+                    }`}
+                  />
+                )}
+              </button>
+            );
+          })}
         </aside>
 
         {/* Center Browse Grid */}

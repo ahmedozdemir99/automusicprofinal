@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import express, { type Request, type Response } from 'express';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
+import { WebSocketServer, WebSocket } from 'ws';
 import {
   catalogDb,
   cleanTrackTitle,
@@ -1008,6 +1010,58 @@ async function startServer(): Promise<void> {
     void handleAudioProxy(req, res);
   });
 
+  // 7. Real-Time Google TV Cast & Pairing Room State & REST Check (before Vite/SPA fallback)
+  interface TvCastRoom {
+    code: string;
+    receivers: Set<WebSocket>;
+    controllers: Set<WebSocket>;
+    state: Record<string, unknown> | null;
+    lastUpdated: number;
+  }
+
+  const tvRooms = new Map<string, TvCastRoom>();
+  const normalizeTvCode = (raw: unknown): string =>
+    String(raw ?? '')
+      .replace(/[^0-9]/g, '')
+      .slice(0, 6);
+
+  const allocateTvCode = (preferred?: string): string => {
+    const cleanPref = normalizeTvCode(preferred);
+    if (cleanPref.length === 6) return cleanPref;
+    for (let i = 0; i < 20; i++) {
+      const candidate = String(Math.floor(100000 + Math.random() * 900000));
+      if (!tvRooms.has(candidate)) return candidate;
+    }
+    return String(Date.now()).slice(-6);
+  };
+
+  const sendWs = (ws: WebSocket, payload: unknown) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(payload));
+    }
+  };
+
+  // Prune stale empty TV rooms every 10 minutes
+  const tvCleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [code, room] of tvRooms.entries()) {
+      if (room.receivers.size === 0 && room.controllers.size === 0 && now - room.lastUpdated > 1000 * 60 * 15) {
+        tvRooms.delete(code);
+      }
+    }
+  }, 1000 * 60 * 10);
+  tvCleanupTimer.unref();
+
+  app.get('/api/tv-cast/room/:code', (req: Request, res: Response) => {
+    const code = normalizeTvCode(req.params.code);
+    const room = tvRooms.get(code);
+    res.json({
+      exists: Boolean(room && room.receivers.size > 0),
+      receiverCount: room?.receivers.size ?? 0,
+      controllerCount: room?.controllers.size ?? 0,
+    });
+  });
+
   // Vite dev middleware vs production dist (HMR & WS disabled cleanly in middlewareMode)
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
@@ -1070,8 +1124,161 @@ export class ErrorOverlay extends HTMLElement {}
     });
   }
 
+  const httpServer = http.createServer(app);
+
+  // 8. Real-Time Google TV Cast & Pairing WebSocket Relay (/ws/tv-cast)
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws/tv-cast' });
+
+  wss.on('connection', (ws: WebSocket) => {
+    let joinedCode: string | null = null;
+    let role: 'receiver' | 'controller' | null = null;
+
+    const detach = () => {
+      if (!joinedCode || !role) return;
+      const room = tvRooms.get(joinedCode);
+      if (!room) return;
+      if (role === 'receiver') room.receivers.delete(ws);
+      else room.controllers.delete(ws);
+      room.lastUpdated = Date.now();
+
+      const presence = {
+        type: 'cast:presence',
+        code: joinedCode,
+        receiverCount: room.receivers.size,
+        controllerCount: room.controllers.size,
+      };
+      room.receivers.forEach((r) => sendWs(r, presence));
+      room.controllers.forEach((c) => sendWs(c, presence));
+
+      joinedCode = null;
+      role = null;
+    };
+
+    ws.on('message', (rawBuf) => {
+      let msg: Record<string, unknown>;
+      try {
+        msg = JSON.parse(rawBuf.toString()) as Record<string, unknown>;
+      } catch {
+        return;
+      }
+
+      if (msg.type === 'ping') {
+        sendWs(ws, { type: 'pong', ts: Date.now() });
+        return;
+      }
+
+      if (msg.type === 'tv:register') {
+        detach();
+        const code = allocateTvCode(typeof msg.code === 'string' ? msg.code : undefined);
+        let room = tvRooms.get(code);
+        if (!room) {
+          room = { code, receivers: new Set(), controllers: new Set(), state: null, lastUpdated: Date.now() };
+          tvRooms.set(code, room);
+        }
+        room.receivers.add(ws);
+        room.lastUpdated = Date.now();
+        joinedCode = code;
+        role = 'receiver';
+
+        sendWs(ws, {
+          type: 'tv:registered',
+          code,
+          receiverCount: room.receivers.size,
+          controllerCount: room.controllers.size,
+          state: room.state,
+        });
+        room.controllers.forEach((c) =>
+          sendWs(c, {
+            type: 'cast:presence',
+            code,
+            receiverCount: room!.receivers.size,
+            controllerCount: room!.controllers.size,
+          })
+        );
+        return;
+      }
+
+      if (msg.type === 'controller:pair') {
+        const code = normalizeTvCode(msg.code);
+        if (code.length !== 6) {
+          sendWs(ws, { type: 'cast:error', message: 'Lütfen Google TV ekranındaki 6 haneli kodu girin.' });
+          return;
+        }
+        const room = tvRooms.get(code);
+        if (!room || room.receivers.size === 0) {
+          sendWs(ws, {
+            type: 'cast:error',
+            message: `${code.slice(0, 3)}-${code.slice(3)} kodlu aktif Google TV alıcısı bulunamadı. TV ekranında Alıcı Modu'nun açık olduğundan emin olun.`,
+          });
+          return;
+        }
+        detach();
+        room.controllers.add(ws);
+        room.lastUpdated = Date.now();
+        joinedCode = code;
+        role = 'controller';
+
+        const pairedPayload = {
+          type: 'cast:paired',
+          code,
+          receiverCount: room.receivers.size,
+          controllerCount: room.controllers.size,
+          state: room.state,
+        };
+        sendWs(ws, pairedPayload);
+        room.receivers.forEach((r) => sendWs(r, pairedPayload));
+        return;
+      }
+
+      if (msg.type === 'cast:sync_state' && joinedCode && role === 'controller') {
+        const room = tvRooms.get(joinedCode);
+        if (!room) return;
+        const nextState = (msg.state && typeof msg.state === 'object' ? msg.state : null) as Record<
+          string,
+          unknown
+        > | null;
+        if (!nextState) return;
+        room.state = nextState;
+        room.lastUpdated = Date.now();
+        room.receivers.forEach((r) => sendWs(r, { type: 'cast:state', state: nextState }));
+        return;
+      }
+
+      if (msg.type === 'tv:telemetry' && joinedCode && role === 'receiver') {
+        const room = tvRooms.get(joinedCode);
+        if (!room) return;
+        room.lastUpdated = Date.now();
+        room.controllers.forEach((c) =>
+          sendWs(c, {
+            type: 'tv:telemetry',
+            currentTime: Number(msg.currentTime) || 0,
+            duration: Number(msg.duration) || 0,
+            isPlaying: Boolean(msg.isPlaying),
+          })
+        );
+        return;
+      }
+
+      if (msg.type === 'tv:command' && joinedCode && role === 'receiver') {
+        const room = tvRooms.get(joinedCode);
+        if (!room) return;
+        room.lastUpdated = Date.now();
+        room.controllers.forEach((c) =>
+          sendWs(c, {
+            type: 'tv:command',
+            action: msg.action,
+            positionSec: msg.positionSec,
+          })
+        );
+      }
+    });
+
+    ws.on('close', detach);
+    ws.on('error', detach);
+  });
+
   // Listen immediately on process.env.PORT and 0.0.0.0 so Cloud Run health checks pass right away
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`AutoMusic Pro 4 server running on http://0.0.0.0:${PORT}`);
     // Gently pre-warm SQLite category tracks AFTER listening so startup is never delayed
     catalogDb.warmPopularCategoriesInBackground();

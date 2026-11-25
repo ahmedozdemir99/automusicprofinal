@@ -17,6 +17,12 @@
     color: #F5F2EB;
     letter-spacing: 0.01em;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  html.day-mode body {
+    background-color: #F5F1E8;
+    color: #181612;
   }
 
   .font-arabic {
@@ -43,6 +49,10 @@
   border-radius: 9999px;
 }
 
+html.day-mode ::-webkit-scrollbar-thumb {
+  background: rgba(24, 22, 18, 0.22);
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(212, 175, 55, 0.45);
 }
@@ -61,6 +71,10 @@ input[type="range"].gold-slider::-webkit-slider-runnable-track {
   background: rgba(255, 255, 255, 0.14);
 }
 
+html.day-mode input[type="range"].gold-slider::-webkit-slider-runnable-track {
+  background: rgba(24, 22, 18, 0.18);
+}
+
 input[type="range"].gold-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -72,6 +86,10 @@ input[type="range"].gold-slider::-webkit-slider-thumb {
   margin-top: -5px;
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25);
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.day-mode input[type="range"].gold-slider::-webkit-slider-thumb {
+  border-color: #FFFFFF;
 }
 
 input[type="range"].gold-slider:hover::-webkit-slider-thumb {
@@ -95,6 +113,274 @@ input[type="range"].eq-slider {
   accent-color: #D4AF37;
   cursor: pointer;
 }
+
+/* Pulsing green Quran button animations (harmonized with neighboring controls) */
+@keyframes quranBtnPulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.42), inset 0 0 0 1px rgba(52, 211, 153, 0.45);
+  }
+  50% {
+    opacity: 0.78;
+    box-shadow: 0 0 14px 2px rgba(16, 185, 129, 0.3), inset 0 0 0 1px rgba(52, 211, 153, 0.85);
+  }
+}
+
+@keyframes quranTabPulse {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0));
+  }
+  50% {
+    opacity: 0.65;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.75));
+  }
+}
+
+.quran-btn-blink {
+  animation: quranBtnPulse 1.8s ease-in-out infinite;
+}
+
+.quran-tab-blink {
+  animation: quranTabPulse 1.8s ease-in-out infinite;
+}
+
+/* ============================================================
+   Warm Parchment & Ivory Day Mode (Gündüz Modu) for Normal Mode
+   ============================================================ */
+html.day-mode .bg-\[\#09090B\],
+html.day-mode .bg-\[\#0A0A0D\],
+html.day-mode .bg-\[\#0B0B0E\],
+html.day-mode .bg-\[\#0B0B0F\],
+html.day-mode .bg-\[\#0C0C0F\] {
+  background-color: #F5F1E8;
+}
+
+html.day-mode .bg-\[\#0D0D11\],
+html.day-mode .bg-\[\#0D0D11\]\/90,
+html.day-mode .bg-\[\#0E0E12\],
+html.day-mode .bg-\[\#111115\] {
+  background-color: #ECE6D8;
+}
+
+html.day-mode .bg-\[\#0B0B0F\]\/92,
+html.day-mode .bg-\[\#0D0D11\]\/95,
+html.day-mode .bg-\[\#111115\]\/95 {
+  background-color: rgba(236, 230, 216, 0.94);
+}
+
+html.day-mode .bg-\[\#121216\],
+html.day-mode .bg-\[\#141418\],
+html.day-mode .bg-\[\#15141A\],
+html.day-mode .bg-\[\#16161B\],
+html.day-mode .bg-\[\#16161C\] {
+  background-color: #FFFFFF;
+}
+
+html.day-mode .bg-\[\#17171D\],
+html.day-mode .bg-\[\#18181D\],
+html.day-mode .bg-\[\#18181F\],
+html.day-mode .bg-\[\#19181F\],
+html.day-mode .bg-\[\#191920\],
+html.day-mode .bg-\[\#1A191E\],
+html.day-mode .bg-\[\#1C1C22\],
+html.day-mode .bg-\[\#1D1D24\],
+html.day-mode .bg-black\/30 {
+  background-color: #EFE9DA;
+}
+
+html.day-mode .bg-\[\#16140D\],
+html.day-mode .bg-\[\#161510\],
+html.day-mode .bg-\[\#17150F\],
+html.day-mode .bg-\[\#181610\],
+html.day-mode .bg-\[\#19160E\],
+html.day-mode .bg-\[\#191712\],
+html.day-mode .bg-\[\#1A1710\],
+html.day-mode .bg-\[\#1A1811\],
+html.day-mode .bg-\[\#1A1812\],
+html.day-mode .bg-\[\#1B1810\],
+html.day-mode .bg-\[\#1C1A12\],
+html.day-mode .bg-\[\#1D180C\],
+html.day-mode .bg-\[\#1D190F\],
+html.day-mode .bg-\[\#1D1A10\] {
+  background-color: #FAF2DC;
+}
+
+html.day-mode .hover\:bg-\[\#19181F\]:hover,
+html.day-mode .hover\:bg-\[\#1C1C22\]:hover,
+html.day-mode .hover\:bg-\[\#1E1D22\]:hover,
+html.day-mode .hover\:bg-\[\#1E1E24\]:hover,
+html.day-mode .hover\:bg-\[\#22212A\]:hover,
+html.day-mode .hover\:bg-\[\#23212A\]:hover,
+html.day-mode .hover\:bg-\[\#23232C\]:hover,
+html.day-mode .hover\:bg-\[\#24242E\]:hover,
+html.day-mode .hover\:bg-\[\#262630\]:hover {
+  background-color: #F2ECE0;
+}
+
+html.day-mode .hover\:bg-\[\#1F1C12\]:hover,
+html.day-mode .hover\:bg-\[\#221E13\]:hover {
+  background-color: #F4E8C6;
+}
+
+html.day-mode .bg-white\/\[0\.04\],
+html.day-mode .bg-white\/\[0\.05\],
+html.day-mode .bg-white\/\[0\.06\],
+html.day-mode .bg-white\/\[0\.07\],
+html.day-mode .bg-white\/\[0\.08\],
+html.day-mode .bg-white\/10 {
+  background-color: rgba(24, 22, 18, 0.06);
+}
+
+html.day-mode .hover\:bg-white\/\[0\.03\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.04\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.05\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.06\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.08\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.09\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.11\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.12\]:hover,
+html.day-mode .hover\:bg-white\/\[0\.1\]:hover,
+html.day-mode .hover\:bg-white\/15:hover {
+  background-color: rgba(24, 22, 18, 0.11);
+}
+
+/* Warm light gradients for Hero & Banners */
+html.day-mode .from-\[\#17150F\],
+html.day-mode .from-\[\#19150B\],
+html.day-mode .from-\[\#231D14\] {
+  --tw-gradient-from: #F8F0DC;
+}
+
+html.day-mode .via-\[\#111115\],
+html.day-mode .via-\[\#121216\],
+html.day-mode .via-\[\#151419\] {
+  --tw-gradient-via: #FFFDF8;
+}
+
+html.day-mode .to-\[\#0B0B0E\] {
+  --tw-gradient-to: #F2ECE0;
+}
+
+/* Crisp Typography & Accessible Gold in Day Mode */
+html.day-mode .text-\[\#F5F2EB\],
+html.day-mode .text-\[\#E5E2D9\],
+html.day-mode .hover\:text-\[\#F5F2EB\]:hover {
+  color: #181612;
+}
+
+html.day-mode .text-white {
+  color: #181612;
+}
+
+html.day-mode .bg-red-600.text-white,
+html.day-mode .bg-emerald-600.text-white {
+  color: #FFFFFF;
+}
+
+html.day-mode .text-\[\#CFCBC2\],
+html.day-mode .text-\[\#C8C5BC\],
+html.day-mode .text-\[\#C4C0B6\],
+html.day-mode .text-\[\#A8A49B\],
+html.day-mode .text-\[\#A19E95\] {
+  color: #464137;
+}
+
+html.day-mode .text-\[\#9B978E\],
+html.day-mode .text-\[\#8C887F\],
+html.day-mode .text-\[\#7C7970\],
+html.day-mode .text-\[\#6F6C64\] {
+  color: #6B6559;
+}
+
+html.day-mode .text-\[\#D4AF37\],
+html.day-mode .text-\[\#E5C158\],
+html.day-mode .text-\[\#C9B370\],
+html.day-mode .text-\[\#C4B78B\],
+html.day-mode .text-\[\#F2D785\],
+html.day-mode .hover\:text-\[\#D4AF37\]:hover,
+html.day-mode .hover\:text-\[\#E5C158\]:hover,
+html.day-mode .group:hover .group-hover\:text-\[\#D4AF37\],
+html.day-mode .group:hover .group-hover\:text-\[\#E5C158\] {
+  color: #9A740D;
+}
+
+/* Keep dark text on gold CTA buttons */
+html.day-mode .bg-\[\#D4AF37\] .text-\[\#09090B\],
+html.day-mode .bg-\[\#D4AF37\].text-\[\#09090B\] {
+  color: #09090B;
+}
+
+/* Crisp visible borders on warm light surfaces */
+html.day-mode .border-white\/\[0\.05\],
+html.day-mode .border-white\/\[0\.06\],
+html.day-mode .border-white\/\[0\.07\],
+html.day-mode .border-white\/\[0\.08\],
+html.day-mode .border-white\/10,
+html.day-mode .border-white\/15,
+html.day-mode .border-white\/25 {
+  border-color: rgba(24, 22, 18, 0.13);
+}
+
+html.day-mode .divide-white\/\[0\.04\] > :not(:last-child),
+html.day-mode .divide-white\/\[0\.06\] > :not(:last-child) {
+  border-color: rgba(24, 22, 18, 0.1);
+}
+
+/* Semantic emerald, amber & red readability on Day Mode */
+html.day-mode .text-emerald-300,
+html.day-mode .text-emerald-400 {
+  color: #047857;
+}
+
+html.day-mode .text-amber-200,
+html.day-mode .text-amber-300,
+html.day-mode .text-amber-400 {
+  color: #92400E;
+}
+
+html.day-mode .text-red-200 {
+  color: #991B1B;
+}
+
+html.day-mode .bg-red-950\/40 {
+  background-color: #FEE2E2;
+}
+
+html.day-mode .bg-amber-950\/30 {
+  background-color: #FEF3C7;
+}
+
+/* Preserve rich dark-obsidian & gold ArtworkCovers in Day Mode */
+html.day-mode [data-artwork-cover="true"] {
+  background-color: #121216;
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
+html.day-mode [data-artwork-cover="true"].from-\[\#221A10\] { --tw-gradient-from: #221A10; }
+html.day-mode [data-artwork-cover="true"].from-\[\#0E1D19\] { --tw-gradient-from: #0E1D19; }
+html.day-mode [data-artwork-cover="true"].from-\[\#241B0D\] { --tw-gradient-from: #241B0D; }
+html.day-mode [data-artwork-cover="true"].from-\[\#211610\] { --tw-gradient-from: #211610; }
+html.day-mode [data-artwork-cover="true"].from-\[\#101B1B\] { --tw-gradient-from: #101B1B; }
+html.day-mode [data-artwork-cover="true"].from-\[\#23180E\] { --tw-gradient-from: #23180E; }
+html.day-mode [data-artwork-cover="true"].from-\[\#1F1316\] { --tw-gradient-from: #1F1316; }
+html.day-mode [data-artwork-cover="true"].from-\[\#23151B\] { --tw-gradient-from: #23151B; }
+html.day-mode [data-artwork-cover="true"].from-\[\#1E190E\] { --tw-gradient-from: #1E190E; }
+html.day-mode [data-artwork-cover="true"].from-\[\#1B171D\] { --tw-gradient-from: #1B171D; }
+html.day-mode [data-artwork-cover="true"].from-\[\#201412\] { --tw-gradient-from: #201412; }
+html.day-mode [data-artwork-cover="true"].from-\[\#1A1812\] { --tw-gradient-from: #1A1812; }
+html.day-mode [data-artwork-cover="true"].from-\[\#1A190E\] { --tw-gradient-from: #1A190E; }
+html.day-mode [data-artwork-cover="true"].from-\[\#18171D\] { --tw-gradient-from: #18171D; }
+html.day-mode [data-artwork-cover="true"].from-\[\#171B17\] { --tw-gradient-from: #171B17; }
+html.day-mode [data-artwork-cover="true"].from-\[\#20190D\] { --tw-gradient-from: #20190D; }
+html.day-mode [data-artwork-cover="true"].from-\[\#1D170C\] { --tw-gradient-from: #1D170C; }
+html.day-mode [data-artwork-cover="true"].from-\[\#221B0A\] { --tw-gradient-from: #221B0A; }
+html.day-mode [data-artwork-cover="true"].from-\[\#191815\] { --tw-gradient-from: #191815; }
+html.day-mode [data-artwork-cover="true"].to-\[\#09090B\] { --tw-gradient-to: #09090B; }
+html.day-mode [data-artwork-cover="true"].to-\[\#0A0908\] { --tw-gradient-to: #0A0908; }
+html.day-mode [data-artwork-cover="true"] .text-\[\#D4AF37\] { color: #D4AF37; }
+html.day-mode [data-artwork-cover="true"] .text-\[\#D4AF37\]\/75 { color: rgba(212, 175, 55, 0.75); }
+html.day-mode [data-artwork-cover="true"] .text-\[\#E8CF78\] { color: #E8CF78; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -55,7 +55,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
         <button
           type="button"
           onClick={() => void handleClick()}
-          className={`w-full h-11 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-[#F5F2EB] text-xs font-medium inline-flex items-center justify-center gap-2 transition-colors whitespace-nowrap ${className}`}
+          className={`w-full h-10 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-[#F5F2EB] text-xs font-medium inline-flex items-center justify-center gap-2 transition-colors whitespace-nowrap ${className}`}
         >
           <Download className="w-4 h-4 text-[#D4AF37] shrink-0" />
           Uygulamayı Yükle
@@ -65,10 +65,10 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           type="button"
           onClick={() => void handleClick()}
           aria-label="Uygulamayı Yükle"
-          className={`inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[#F5F2EB] text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${className}`}
+          className={`inline-flex items-center justify-center gap-1 h-8 px-2.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[#F5F2EB] text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${className}`}
         >
           <Download className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-          Yükle
+          <span className="hidden sm:inline">Yükle</span>
         </button>
       ) : (
         <button

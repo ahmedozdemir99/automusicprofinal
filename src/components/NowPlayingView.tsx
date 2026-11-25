@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
+  Bluetooth,
   BookOpen,
   Car,
   CheckCircle2,
@@ -20,6 +21,7 @@ import {
   SkipBack,
   SkipForward,
   SlidersHorizontal,
+  Tv,
   X,
 } from 'lucide-react';
 import { useAutoMusic } from '../context/AutoMusicContext';
@@ -78,6 +80,9 @@ export const NowPlayingView: React.FC = () => {
     goBack,
     navigate,
     setCarMode,
+    openConnectModal,
+    tvCastConnected,
+    btConnected,
   } = useAutoMusic();
 
   const [showSleepMenu, setShowSleepMenu] = useState(false);
@@ -123,7 +128,7 @@ export const NowPlayingView: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate({ name: 'quran' })}
-          className="px-5 py-2.5 rounded-xl bg-[#D4AF37] text-[#09090B] text-sm font-semibold hover:bg-[#E5C158] transition-colors"
+          className="quran-btn-blink px-5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/60 text-emerald-300 text-sm font-semibold transition-colors"
         >
           Kur'an-ı Kerim Bölümüne Git
         </button>
@@ -139,17 +144,17 @@ export const NowPlayingView: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-10">
       {/* Top Action Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <button
           type="button"
           onClick={goBack}
-          className="inline-flex items-center gap-1.5 text-sm text-[#A19E95] hover:text-[#F5F2EB] min-h-[40px] px-2 rounded-lg transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-1.5 text-sm text-[#A19E95] hover:text-[#F5F2EB] min-h-[40px] px-2 -ml-2 rounded-lg transition-colors whitespace-nowrap self-start sm:self-auto"
         >
           <ChevronLeft className="w-4 h-4" />
           Geri
         </button>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {currentTrack.surahNumber && currentTrack.reciterId && (
             <button
               type="button"
@@ -181,6 +186,30 @@ export const NowPlayingView: React.FC = () => {
               : sleepTimerMode === 'end_of_track'
                 ? 'Parça Sonu'
                 : formatDuration(sleepTimerRemainingSec ?? 0)}
+          </button>
+          <button
+            type="button"
+            onClick={() => openConnectModal('tv')}
+            className={`inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl border text-xs font-medium transition-colors whitespace-nowrap ${
+              tvCastConnected
+                ? 'bg-emerald-500/18 border-emerald-500/45 text-emerald-300'
+                : 'bg-[#16161B] border-white/10 text-[#F5F2EB] hover:bg-[#1E1D22]'
+            }`}
+          >
+            <Tv className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+            Google TV
+          </button>
+          <button
+            type="button"
+            onClick={() => openConnectModal('bluetooth')}
+            className={`inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl border text-xs font-medium transition-colors whitespace-nowrap ${
+              btConnected
+                ? 'bg-emerald-500/18 border-emerald-500/45 text-emerald-300'
+                : 'bg-[#16161B] border-white/10 text-[#F5F2EB] hover:bg-[#1E1D22]'
+            }`}
+          >
+            <Bluetooth className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+            Bluetooth
           </button>
           <button
             type="button"
@@ -373,7 +402,7 @@ export const NowPlayingView: React.FC = () => {
           </div>
 
           {/* Secondary Utility Actions */}
-          <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-white/[0.06]">
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 pt-2 border-t border-white/[0.06]">
             <button
               type="button"
               onClick={() => toggleFavoriteTrack(currentTrack)}

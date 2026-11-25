@@ -1,18 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Bluetooth,
   Car,
   CheckCircle2,
   ChevronLeft,
   Download,
   HardDrive,
   Headphones,
+  Moon,
   Play,
   Plus,
   RotateCcw,
   Save,
   ShieldCheck,
   SlidersHorizontal,
+  Sun,
   Trash2,
+  Tv,
   Upload,
   Waves,
 } from 'lucide-react';
@@ -787,8 +791,14 @@ export const GeneralSettingsScreen: React.FC = () => {
     downloads,
     storageEstimate,
     eqSettings,
+    dayMode,
+    toggleDayMode,
     navigate,
     setCarMode,
+    openConnectModal,
+    tvCastConnected,
+    btConnected,
+    btDeviceName,
     exportUserBackupJson,
     importUserBackupJson,
     showToast,
@@ -859,6 +869,52 @@ export const GeneralSettingsScreen: React.FC = () => {
           <p className="text-base font-semibold text-[#F5F2EB]">Araç Modunu Aç</p>
           <p className="text-xs text-[#9B978E]">
             Sürüşe uygun büyük dokunmatik arayüz, gece/gündüz teması ve Bluetooth medya tuşları
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleDayMode}
+          className="p-5 rounded-2xl bg-[#121216] hover:bg-[#19181F] border border-white/[0.07] text-left space-y-2 transition-colors"
+        >
+          {dayMode ? (
+            <Moon className="w-5 h-5 text-[#D4AF37]" />
+          ) : (
+            <Sun className="w-5 h-5 text-[#D4AF37]" />
+          )}
+          <p className="text-base font-semibold text-[#F5F2EB]">
+            Görünüm: {dayMode ? 'Gündüz Modu (Açık)' : 'Gece Modu (Koyu)'}
+          </p>
+          <p className="text-xs text-[#9B978E]">
+            Normal mod ve Araç modu için tek dokunuşla {dayMode ? 'koyu gece' : 'aydınlık gündüz'} temasına geçin
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => openConnectModal('tv')}
+          className="p-5 rounded-2xl bg-[#121216] hover:bg-[#19181F] border border-white/[0.07] text-left space-y-2 transition-colors"
+        >
+          <Tv className="w-5 h-5 text-[#D4AF37]" />
+          <p className="text-base font-semibold text-[#F5F2EB]">
+            Google TV Ekran Paylaşımı {tvCastConnected ? '· Bağlı' : ''}
+          </p>
+          <p className="text-xs text-[#9B978E]">
+            YouTube tarzı 6 haneli TV koduyla veya doğrudan Chromecast seçimiyle TV ekranına aktarın
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => openConnectModal('bluetooth')}
+          className="p-5 rounded-2xl bg-[#121216] hover:bg-[#19181F] border border-white/[0.07] text-left space-y-2 transition-colors"
+        >
+          <Bluetooth className="w-5 h-5 text-[#D4AF37]" />
+          <p className="text-base font-semibold text-[#F5F2EB]">
+            Bluetooth Araç Ekranı {btConnected ? `· ${btDeviceName ?? 'Bağlı'}` : ''}
+          </p>
+          <p className="text-xs text-[#9B978E]">
+            Bluetooth araç multimedya eşleştirmesi, ses çıkışı seçimi ve otomatik Araç Modu
           </p>
         </button>
 

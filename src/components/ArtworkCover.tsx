@@ -73,6 +73,7 @@ export const ArtworkCover: React.FC<ArtworkCoverProps> = ({
   if (validImageUrl) {
     return (
       <div
+        data-artwork-cover="true"
         className={`relative shrink-0 overflow-hidden bg-[#121216] border border-[#D4AF37]/25 select-none ${SIZE_CLASSES[size]} ${className}`}
       >
         <img
@@ -89,6 +90,7 @@ export const ArtworkCover: React.FC<ArtworkCoverProps> = ({
 
   return (
     <div
+      data-artwork-cover="true"
       className={`relative shrink-0 overflow-hidden bg-gradient-to-br ${MOTIF_GRADIENTS[safeMotif]} border border-[#D4AF37]/20 flex flex-col items-center justify-center select-none ${SIZE_CLASSES[size]} ${className}`}
     >
       {/* Subtle radial warm gold halo */}

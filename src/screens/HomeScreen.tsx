@@ -74,7 +74,7 @@ export const HomeScreen: React.FC = () => {
             <p className="text-sm sm:text-base text-[#A8A49B] max-w-2xl leading-relaxed">
               {categories.length} müzik kategorisi, 114 surelik Kur'an-ı Kerim arşivi, akıllı çevrimdışı kayıt ve gerçek 10 bantlı ekolayzır tek çatı altında.
             </p>
-            <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex lg:flex-wrap items-stretch sm:items-center gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => void playQueue(featuredSurahs, false)}
@@ -99,34 +99,34 @@ export const HomeScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate({ name: 'categories' })}
-              className="h-full p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
+              className="h-full min-h-[112px] min-w-0 p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
             >
-              <Disc3 className="w-5 h-5 text-[#D4AF37] mb-3" />
-              <div>
+              <Disc3 className="w-5 h-5 text-[#D4AF37] mb-3 shrink-0" />
+              <div className="min-w-0 w-full">
                 <p className="text-xl font-bold font-mono tabular-nums text-[#F5F2EB]">
                   {categories.length}
                 </p>
-                <p className="text-xs text-[#9B978E] mt-0.5">Müzik Kategorisi</p>
+                <p className="text-xs text-[#9B978E] mt-0.5 truncate">Müzik Kategorisi</p>
               </div>
             </button>
             <button
               type="button"
               onClick={() => navigate({ name: 'quran' })}
-              className="h-full p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
+              className="h-full min-h-[112px] min-w-0 p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
             >
-              <BookOpen className="w-5 h-5 text-[#D4AF37] mb-3" />
-              <div>
+              <BookOpen className="w-5 h-5 text-[#D4AF37] mb-3 shrink-0" />
+              <div className="min-w-0 w-full">
                 <p className="text-xl font-bold font-mono tabular-nums text-[#F5F2EB]">114</p>
-                <p className="text-xs text-[#9B978E] mt-0.5">Sure · 6 Kâri</p>
+                <p className="text-xs text-[#9B978E] mt-0.5 truncate">Kur&apos;an · 6 Kâri</p>
               </div>
             </button>
             <button
               type="button"
               onClick={() => navigate({ name: 'downloads' })}
-              className="h-full p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
+              className="h-full min-h-[112px] min-w-0 p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
             >
-              <Download className="w-5 h-5 text-[#D4AF37] mb-3" />
-              <div>
+              <Download className="w-5 h-5 text-[#D4AF37] mb-3 shrink-0" />
+              <div className="min-w-0 w-full">
                 <p className="text-xl font-bold font-mono tabular-nums text-[#F5F2EB]">
                   {downloads.length}
                 </p>
@@ -138,12 +138,12 @@ export const HomeScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate({ name: 'audio_settings' })}
-              className="h-full p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
+              className="h-full min-h-[112px] min-w-0 p-4 rounded-2xl bg-[#0D0D11]/90 border border-white/[0.07] hover:border-[#D4AF37]/40 text-left transition-colors flex flex-col justify-between"
             >
-              <SlidersHorizontal className="w-5 h-5 text-[#D4AF37] mb-3" />
-              <div>
+              <SlidersHorizontal className="w-5 h-5 text-[#D4AF37] mb-3 shrink-0" />
+              <div className="min-w-0 w-full">
                 <p className="text-xl font-bold font-mono tabular-nums text-[#F5F2EB]">320</p>
-                <p className="text-xs text-[#9B978E] mt-0.5">kbps Tercih &amp; EQ</p>
+                <p className="text-xs text-[#9B978E] mt-0.5 truncate">kbps Tercih &amp; EQ</p>
               </div>
             </button>
           </div>
@@ -276,9 +276,9 @@ export const HomeScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate({ name: 'quran' })}
-              className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-medium text-[#D4AF37] transition-colors whitespace-nowrap shrink-0"
+              className="quran-btn-blink inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/22 border border-emerald-500/45 text-xs font-medium text-emerald-300 transition-colors whitespace-nowrap shrink-0"
             >
-              114 Sure
+              Kur&apos;an (114 Sure)
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

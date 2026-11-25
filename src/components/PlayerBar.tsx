@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Bluetooth,
   Car,
   Heart,
   Loader2,
@@ -13,6 +14,7 @@ import {
   SkipBack,
   SkipForward,
   SlidersHorizontal,
+  Tv,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -44,6 +46,9 @@ export const PlayerBar: React.FC = () => {
     toggleFavoriteTrack,
     navigate,
     setCarMode,
+    openConnectModal,
+    tvCastConnected,
+    btConnected,
   } = useAutoMusic();
 
   if (!currentTrack) {
@@ -190,6 +195,30 @@ export const PlayerBar: React.FC = () => {
               {sleepTimerMode === 'end_of_track' ? 'Son' : formatDuration(sleepTimerRemainingSec ?? 0)}
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => openConnectModal('tv')}
+            title="Google TV Ekran Paylaşımı"
+            aria-label="Google TV Ekran Paylaşımı"
+            className={`min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg transition-colors ${
+              tvCastConnected ? 'text-emerald-400 bg-emerald-500/15' : 'text-[#9B978E] hover:text-[#D4AF37]'
+            }`}
+          >
+            <Tv className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openConnectModal('bluetooth')}
+            title="Bluetooth Araç Bağlantısı"
+            aria-label="Bluetooth Araç Bağlantısı"
+            className={`min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg transition-colors ${
+              btConnected ? 'text-emerald-400 bg-emerald-500/15' : 'text-[#9B978E] hover:text-[#D4AF37]'
+            }`}
+          >
+            <Bluetooth className="w-4 h-4" />
+          </button>
 
           <button
             type="button"

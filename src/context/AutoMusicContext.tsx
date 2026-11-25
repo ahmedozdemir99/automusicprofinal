@@ -21,6 +21,18 @@ import {
   quranRepository,
 } from '../services/catalogRepository';
 import {
+  BluetoothDeviceLike,
+  TvCastControllerClient,
+  TvCastPlaybackState,
+  connectBluetoothCarDevice,
+  formatTvCode,
+  isAudioOutputPickerSupported,
+  isRemotePlaybackSupported,
+  isWebBluetoothSupported,
+  promptNativeGoogleCast,
+  selectBluetoothAudioOutput,
+} from '../services/deviceCastService';
+import {
   DeviceStorageEstimate,
   clearAllOfflineAudio,
   deleteOfflineAudio,
@@ -63,6 +75,7 @@ const STORAGE_KEYS = {
   LOADED_CATALOG: 'amp_catalog_tracks_v2',
   PLAY_COUNTS: 'amp_play_counts_v1',
   SEARCH_HISTORY: 'amp_search_history_v1',
+  DAY_MODE: 'amp_day_mode_v1',
 };
 
 const DEFAULT_DOWNLOAD_SETTINGS: DownloadSettings = {
@@ -146,6 +159,9 @@ interface AutoMusicContextValue {
   goBack: () => void;
   carMode: boolean;
   setCarMode: (enabled: boolean) => void;
+  dayMode: boolean;
+  setDayMode: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleDayMode: () => void;
 
   // Categories & Database Catalog
   categories: MusicCategory[];
@@ -257,6 +273,36 @@ interface AutoMusicContextValue {
   exportUserBackupJson: () => string;
   importUserBackupJson: (jsonText: string) => { ok: boolean; message: string };
 
+  // Google TV Cast & Bluetooth Car Connectivity
+  connectModalTab: 'tv' | 'bluetooth' | null;
+  openConnectModal: (tab?: 'tv' | 'bluetooth') => void;
+  closeConnectModal: () => void;
+  isTvReceiverMode: boolean;
+  enterTvReceiverMode: () => void;
+  exitTvReceiverMode: () => void;
+  tvCastCode: string | null;
+  tvCastConnected: boolean;
+  tvReceiverCount: number;
+  tvCastError: string | null;
+  mutePhoneWhileCasting: boolean;
+  setMutePhoneWhileCasting: (mute: boolean) => void;
+  isRemoteCastSupported: boolean;
+  connectToTvByCode: (code: string) => void;
+  disconnectTvCast: () => void;
+  triggerNativeGoogleCast: () => Promise<void>;
+  btConnected: boolean;
+  btDeviceName: string | null;
+  btBatteryLevel: number | null;
+  btAutoCarMode: boolean;
+  setBtAutoCarMode: (val: boolean) => void;
+  btOutputLabel: string | null;
+  btStatusMessage: string | null;
+  isBluetoothBleSupported: boolean;
+  isAudioOutputSupported: boolean;
+  connectBluetoothCar: () => Promise<void>;
+  disconnectBluetoothCar: () => void;
+  chooseCarAudioOutput: () => Promise<void>;
+
   // Toast Notification
   toastMessage: string | null;
   showToast: (msg: string) => void;
@@ -269,6 +315,29 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const [screen, setScreen] = useState<AppScreen>({ name: 'home' });
   const [screenHistory, setScreenHistory] = useState<AppScreen[]>([]);
   const [carMode, setCarMode] = useState(false);
+  const [dayMode, setDayMode] = useState<boolean>(() =>
+    readJson<boolean>(STORAGE_KEYS.DAY_MODE, false)
+  );
+  const [connectModalTab, setConnectModalTab] = useState<'tv' | 'bluetooth' | null>(null);
+  const [isTvReceiverMode, setIsTvReceiverMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('tv') === '1';
+  });
+
+  // Google TV Cast controller state
+  const [tvCastCode, setTvCastCode] = useState<string | null>(null);
+  const [tvCastConnected, setTvCastConnected] = useState(false);
+  const [tvReceiverCount, setTvReceiverCount] = useState(0);
+  const [tvCastError, setTvCastError] = useState<string | null>(null);
+  const [mutePhoneWhileCasting, setMutePhoneWhileCasting] = useState(true);
+
+  // Bluetooth Car connection state
+  const [btConnected, setBtConnected] = useState(false);
+  const [btDeviceName, setBtDeviceName] = useState<string | null>(null);
+  const [btBatteryLevel, setBtBatteryLevel] = useState<number | null>(null);
+  const [btAutoCarMode, setBtAutoCarMode] = useState(true);
+  const [btOutputLabel, setBtOutputLabel] = useState<string | null>(null);
+  const [btStatusMessage, setBtStatusMessage] = useState<string | null>(null);
 
   // Categories & Database Catalog (always ensures all 18 defaults including Fantezi are present)
   const [categories, setCategories] = useState<MusicCategory[]>(() => {
@@ -386,9 +455,17 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const categoryDiscoveryOffsetsRef = useRef<Record<string, number>>({});
   const sleepTimerModeRef = useRef<SleepTimerMode>('off');
   const volumeRef = useRef<number>(0.9);
+  const tvCastClientRef = useRef<TvCastControllerClient | null>(null);
+  const tvCastConnectedRef = useRef(false);
+  const mutePhoneWhileCastingRef = useRef(true);
+  const btDeviceRef = useRef<BluetoothDeviceLike | null>(null);
+  const togglePlayRef = useRef<() => Promise<void>>(async () => {});
+  const seekToRef = useRef<(sec: number) => void>(() => {});
 
   useEffect(() => { sleepTimerModeRef.current = sleepTimerMode; }, [sleepTimerMode]);
   useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { tvCastConnectedRef.current = tvCastConnected; }, [tvCastConnected]);
+  useEffect(() => { mutePhoneWhileCastingRef.current = mutePhoneWhileCasting; }, [mutePhoneWhileCasting]);
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
@@ -397,6 +474,16 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 3400);
   }, []);
+
+  const toggleDayMode = useCallback(() => {
+    setDayMode((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.DAY_MODE, JSON.stringify(dayMode));
+    document.documentElement.classList.toggle('day-mode', dayMode);
+    document.documentElement.style.colorScheme = dayMode ? 'light' : 'dark';
+  }, [dayMode]);
 
   // Persist user data safely
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories)); }, [categories]);
@@ -1004,6 +1091,12 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const syncStateToTv = useCallback((state: TvCastPlaybackState) => {
+    if (tvCastClientRef.current && tvCastConnectedRef.current) {
+      tvCastClientRef.current.sendState(state);
+    }
+  }, []);
+
   // Resilient Real Audio Playback Core
   // Offline First -> Primary Proxy -> Fallback Mirror Proxy -> Alternative Provider Auto-Search -> Clear Real Error Cause
   const loadAndPlayItem = useCallback(
@@ -1015,6 +1108,38 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       setIsBuffering(true);
 
       const audioEl = sharedAudioEngine.element;
+
+      // If casting to Google TV with phone muted, stream directly on Google TV instead of double-playing on phone
+      if (tvCastConnectedRef.current && mutePhoneWhileCastingRef.current && !item.isLocalFile) {
+        audioEl.pause();
+        setIsPlayingOfflineFile(false);
+        setIsPlaying(true);
+        setIsBuffering(false);
+        setCurrentTime(0);
+        setDuration(item.durationSec || 0);
+        syncStateToTv({
+          track: item,
+          isPlaying: true,
+          positionSec: 0,
+          volume: volumeRef.current,
+          seekNonce: Date.now(),
+          updatedAt: Date.now(),
+        });
+        setRecentlyPlayed((prev) => [item, ...prev.filter((p) => p.contentId !== item.contentId)].slice(0, 40));
+        setPlayCounts((prev) => ({ ...prev, [item.contentId]: (prev[item.contentId] ?? 0) + 1 }));
+        return;
+      }
+
+      if (tvCastConnectedRef.current && !item.isLocalFile) {
+        syncStateToTv({
+          track: item,
+          isPlaying: true,
+          positionSec: 0,
+          volume: volumeRef.current,
+          seekNonce: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
 
       if (activeObjectUrlRef.current) {
         URL.revokeObjectURL(activeObjectUrlRef.current);
@@ -1303,6 +1428,20 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       }
       return;
     }
+
+    if (tvCastConnectedRef.current && mutePhoneWhileCastingRef.current && !currentTrack.isLocalFile) {
+      const nextPlaying = !isPlaying;
+      setIsPlaying(nextPlaying);
+      syncStateToTv({
+        track: currentTrack,
+        isPlaying: nextPlaying,
+        positionSec: currentTime,
+        volume: volumeRef.current,
+        updatedAt: Date.now(),
+      });
+      return;
+    }
+
     if (eqSettings.enabled && audioEl.src) {
       await sharedAudioEngine.resumeContext(audioEl.src);
     }
@@ -1315,6 +1454,15 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
         await audioEl.play();
         setIsPlaying(true);
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+        if (tvCastConnectedRef.current && !currentTrack.isLocalFile) {
+          syncStateToTv({
+            track: currentTrack,
+            isPlaying: true,
+            positionSec: audioEl.currentTime || 0,
+            volume: volumeRef.current,
+            updatedAt: Date.now(),
+          });
+        }
       } catch {
         await loadAndPlayItem(currentTrack, false);
       }
@@ -1322,8 +1470,17 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       audioEl.pause();
       setIsPlaying(false);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      if (tvCastConnectedRef.current && !currentTrack.isLocalFile) {
+        syncStateToTv({
+          track: currentTrack,
+          isPlaying: false,
+          positionSec: audioEl.currentTime || 0,
+          volume: volumeRef.current,
+          updatedAt: Date.now(),
+        });
+      }
     }
-  }, [currentTrack, eqSettings.enabled, loadAndPlayItem, queue]);
+  }, [currentTime, currentTrack, eqSettings.enabled, isPlaying, loadAndPlayItem, queue, syncStateToTv]);
 
   const nextTrack = useCallback(async () => {
     if (queue.length === 0) return;
@@ -1360,24 +1517,54 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const seekTo = useCallback((sec: number) => {
     const audioEl = sharedAudioEngine.element;
     if (!Number.isFinite(sec)) return;
-    const clamped = Math.max(0, Math.min(Number.isFinite(audioEl.duration) ? audioEl.duration : sec, sec));
-    audioEl.currentTime = clamped;
+    const maxDur = Number.isFinite(audioEl.duration) && audioEl.duration > 0 ? audioEl.duration : duration || sec;
+    const clamped = Math.max(0, Math.min(maxDur, sec));
+    if (!(tvCastConnectedRef.current && mutePhoneWhileCastingRef.current)) {
+      audioEl.currentTime = clamped;
+    }
     setCurrentTime(clamped);
-  }, []);
+    if (tvCastConnectedRef.current && currentTrack && !currentTrack.isLocalFile) {
+      syncStateToTv({
+        track: currentTrack,
+        isPlaying,
+        positionSec: clamped,
+        volume: volumeRef.current,
+        seekNonce: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+  }, [currentTrack, duration, isPlaying, syncStateToTv]);
 
   const seekBy = useCallback((deltaSec: number) => {
     const audioEl = sharedAudioEngine.element;
+    if (tvCastConnectedRef.current && mutePhoneWhileCastingRef.current) {
+      const nextPos = Math.max(0, duration > 0 ? Math.min(duration, currentTime + deltaSec) : currentTime + deltaSec);
+      seekTo(nextPos);
+      return;
+    }
     const dur = Number.isFinite(audioEl.duration) ? audioEl.duration : 0;
     const nextPos = Math.max(0, dur > 0 ? Math.min(dur, audioEl.currentTime + deltaSec) : Math.max(0, audioEl.currentTime + deltaSec));
     audioEl.currentTime = nextPos;
     setCurrentTime(nextPos);
-  }, []);
+  }, [currentTime, duration, seekTo]);
 
   const setVolume = useCallback((v: number) => {
     const clamped = Math.max(0, Math.min(1, v));
     setVolumeState(clamped);
     sharedAudioEngine.setVolume(clamped);
-  }, []);
+    if (tvCastConnectedRef.current && currentTrack && !currentTrack.isLocalFile) {
+      syncStateToTv({
+        track: currentTrack,
+        isPlaying,
+        positionSec: currentTime,
+        volume: clamped,
+        updatedAt: Date.now(),
+      });
+    }
+  }, [currentTime, currentTrack, isPlaying, syncStateToTv]);
+
+  useEffect(() => { togglePlayRef.current = togglePlay; }, [togglePlay]);
+  useEffect(() => { seekToRef.current = seekTo; }, [seekTo]);
 
   const toggleShuffle = useCallback(() => setShuffle((s) => !s), []);
   const cycleRepeatMode = useCallback(() => {
@@ -1896,6 +2083,198 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     [showToast]
   );
 
+  // ============================================================
+  // Google TV Cast (YouTube Link Code + Remote Playback) & Bluetooth Car Handlers
+  // ============================================================
+  const openConnectModal = useCallback((tab: 'tv' | 'bluetooth' = 'tv') => {
+    setConnectModalTab(tab);
+  }, []);
+
+  const closeConnectModal = useCallback(() => {
+    setConnectModalTab(null);
+  }, []);
+
+  const enterTvReceiverMode = useCallback(() => {
+    sharedAudioEngine.element.pause();
+    setIsPlaying(false);
+    setConnectModalTab(null);
+    setIsTvReceiverMode(true);
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.set('tv', '1');
+      window.history.replaceState({}, '', u.toString());
+    } catch {
+      // ignore history errors
+    }
+  }, []);
+
+  const exitTvReceiverMode = useCallback(() => {
+    setIsTvReceiverMode(false);
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete('tv');
+      window.history.replaceState({}, '', u.toString());
+    } catch {
+      // ignore history errors
+    }
+  }, []);
+
+  const disconnectTvCast = useCallback(() => {
+    if (tvCastClientRef.current) {
+      tvCastClientRef.current.disconnect();
+      tvCastClientRef.current = null;
+    }
+    setTvCastConnected(false);
+    setTvCastCode(null);
+    setTvReceiverCount(0);
+    setTvCastError(null);
+    showToast('Google TV bağlantısı sonlandırıldı.');
+  }, [showToast]);
+
+  const connectToTvByCode = useCallback(
+    (rawCode: string) => {
+      const clean = rawCode.replace(/[^0-9]/g, '').slice(0, 6);
+      if (clean.length !== 6) {
+        setTvCastError('Lütfen Google TV ekranında görünen 6 haneli kodu eksiksiz girin.');
+        return;
+      }
+
+      if (tvCastClientRef.current) {
+        tvCastClientRef.current.disconnect();
+        tvCastClientRef.current = null;
+      }
+
+      setTvCastError(null);
+      setTvCastCode(clean);
+
+      const client = new TvCastControllerClient(clean, {
+        onPaired: (receiverCount) => {
+          setTvCastConnected(true);
+          setTvReceiverCount(receiverCount);
+          setTvCastError(null);
+          showToast(`Google TV (${formatTvCode(clean)}) ile ekran paylaşımı başlatıldı.`);
+
+          const activeTrack = currentTrackRef.current;
+          if (activeTrack && !activeTrack.isLocalFile) {
+            if (mutePhoneWhileCastingRef.current) {
+              sharedAudioEngine.element.pause();
+            }
+            client.sendState({
+              track: activeTrack,
+              isPlaying: true,
+              positionSec: sharedAudioEngine.element.currentTime || 0,
+              volume: volumeRef.current,
+              seekNonce: Date.now(),
+              updatedAt: Date.now(),
+            });
+          }
+        },
+        onPresence: (receiverCount) => {
+          setTvReceiverCount(receiverCount);
+          if (receiverCount === 0) {
+            setTvCastError('Google TV alıcı ekranı kapandı veya bağlantısı kesildi.');
+          } else {
+            setTvCastError(null);
+          }
+        },
+        onTelemetry: (telemetry) => {
+          if (mutePhoneWhileCastingRef.current) {
+            setCurrentTime(telemetry.currentTime);
+            if (telemetry.duration > 0) setDuration(telemetry.duration);
+            setIsPlaying(telemetry.isPlaying);
+          }
+        },
+        onCommand: (cmd) => {
+          if (cmd.action === 'next') void nextTrackRef.current();
+          else if (cmd.action === 'prev') void prevTrackRef.current();
+          else if (cmd.action === 'toggle') void togglePlayRef.current();
+          else if (cmd.action === 'seek' && typeof cmd.positionSec === 'number') {
+            seekToRef.current(cmd.positionSec);
+          }
+        },
+        onError: (msg) => {
+          setTvCastConnected(false);
+          setTvCastError(msg);
+          showToast(msg);
+        },
+        onClose: () => {
+          setTvCastConnected(false);
+          setTvReceiverCount(0);
+        },
+      });
+
+      tvCastClientRef.current = client;
+    },
+    [showToast]
+  );
+
+  const triggerNativeGoogleCast = useCallback(async () => {
+    const res = await promptNativeGoogleCast(sharedAudioEngine.element);
+    if (!res.ok) {
+      setTvCastError(res.message);
+    }
+    showToast(res.message);
+  }, [showToast]);
+
+  const disconnectBluetoothCar = useCallback(() => {
+    const dev = btDeviceRef.current;
+    if (dev) {
+      try {
+        if (dev.gatt?.connected) dev.gatt.disconnect();
+      } catch {
+        // ignore
+      }
+      btDeviceRef.current = null;
+    }
+    setBtConnected(false);
+    setBtDeviceName(null);
+    setBtBatteryLevel(null);
+    setBtStatusMessage('Bluetooth araç bağlantısı kesildi.');
+    showToast('Bluetooth araç bağlantısı kesildi.');
+  }, [showToast]);
+
+  const connectBluetoothCar = useCallback(async () => {
+    const result = await connectBluetoothCarDevice(() => {
+      setBtConnected(false);
+      setBtBatteryLevel(null);
+      setBtStatusMessage('Bluetooth araç bağlantısı koptu.');
+      showToast('Bluetooth araç bağlantısı kesildi.');
+    });
+
+    setBtStatusMessage(result.message);
+    if (result.ok && result.device) {
+      btDeviceRef.current = result.device;
+      setBtConnected(true);
+      setBtDeviceName(result.name ?? 'Bluetooth Araç Cihazı');
+      setBtBatteryLevel(result.batteryLevel ?? null);
+      if (btAutoCarMode) {
+        setCarMode(true);
+      }
+      showToast(result.message);
+    } else {
+      showToast(result.message);
+    }
+  }, [btAutoCarMode, showToast]);
+
+  const chooseCarAudioOutput = useCallback(async () => {
+    const res = await selectBluetoothAudioOutput(sharedAudioEngine.element);
+    if (res.ok && res.label) {
+      setBtOutputLabel(res.label);
+    }
+    setBtStatusMessage(res.message);
+    showToast(res.message);
+  }, [showToast]);
+
+  useEffect(() => {
+    return () => {
+      tvCastClientRef.current?.disconnect();
+    };
+  }, []);
+
+  const isRemoteCastSupported = useMemo(() => isRemotePlaybackSupported(sharedAudioEngine.element), []);
+  const isBluetoothBleSupported = useMemo(() => isWebBluetoothSupported(), []);
+  const isAudioOutputSupported = useMemo(() => isAudioOutputPickerSupported(sharedAudioEngine.element), []);
+
   const value: AutoMusicContextValue = {
     screen,
     screenHistory,
@@ -1903,6 +2282,9 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     goBack,
     carMode,
     setCarMode,
+    dayMode,
+    setDayMode,
+    toggleDayMode,
     categories,
     addCategory,
     providerStatus,
@@ -1989,6 +2371,34 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     applyCustomEqProfile,
     exportUserBackupJson,
     importUserBackupJson,
+    connectModalTab,
+    openConnectModal,
+    closeConnectModal,
+    isTvReceiverMode,
+    enterTvReceiverMode,
+    exitTvReceiverMode,
+    tvCastCode,
+    tvCastConnected,
+    tvReceiverCount,
+    tvCastError,
+    mutePhoneWhileCasting,
+    setMutePhoneWhileCasting,
+    isRemoteCastSupported,
+    connectToTvByCode,
+    disconnectTvCast,
+    triggerNativeGoogleCast,
+    btConnected,
+    btDeviceName,
+    btBatteryLevel,
+    btAutoCarMode,
+    setBtAutoCarMode,
+    btOutputLabel,
+    btStatusMessage,
+    isBluetoothBleSupported,
+    isAudioOutputSupported,
+    connectBluetoothCar,
+    disconnectBluetoothCar,
+    chooseCarAudioOutput,
     toastMessage,
     showToast,
   };

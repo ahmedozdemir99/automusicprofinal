@@ -273,7 +273,7 @@ export const CategoriesScreen: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => void handleToggleAccordion(cat.id, cat.isQuran)}
-                      className={`h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+                      className={`h-8 min-w-[78px] px-2.5 rounded-lg text-xs font-medium inline-flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
                         isExpanded
                           ? 'bg-[#D4AF37] text-[#09090B]'
                           : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#D4AF37]'
@@ -282,13 +282,13 @@ export const CategoriesScreen: React.FC = () => {
                     >
                       {isExpanded ? (
                         <>
-                          <ChevronUp className="w-3.5 h-3.5" />
-                          <span className="hidden xs:inline">Kapat</span>
+                          <ChevronUp className="w-3.5 h-3.5 shrink-0" />
+                          <span>Kapat</span>
                         </>
                       ) : (
                         <>
-                          <ChevronDown className="w-3.5 h-3.5" />
-                          <span className="hidden xs:inline">Şarkılar</span>
+                          <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+                          <span>Şarkılar</span>
                         </>
                       )}
                     </button>
@@ -298,7 +298,7 @@ export const CategoriesScreen: React.FC = () => {
                         if (cat.isQuran) navigate({ name: 'quran' });
                         else navigate({ name: 'track_list', categoryId: cat.id, title: cat.name });
                       }}
-                      className="h-8 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#F5F2EB] transition-colors"
+                      className="h-8 min-w-[54px] px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#F5F2EB] inline-flex items-center justify-center transition-colors whitespace-nowrap"
                       title="Detay Sayfası"
                     >
                       Detay
@@ -552,25 +552,33 @@ export const ArtistsScreen: React.FC = () => {
                   className="flex items-center gap-3.5 min-w-0 text-left flex-1"
                 >
                   <ArtworkCover motif={artist.motif} size="sm" />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-[#F5F2EB] truncate">{artist.name}</p>
-                      <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#D4AF37]/15 text-[#D4AF37] font-medium shrink-0">
-                        {isExpanded ? 'Akordion Kapat' : 'Akordion Aç'}
-                      </span>
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[#F5F2EB] truncate">{artist.name}</p>
                     <p className="text-xs text-[#9B978E] truncate mt-0.5">
                       {artist.genre} · {artist.trackCount} kayıt
                     </p>
                   </div>
                 </button>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedArtistId(isExpanded ? null : artist.id)}
+                    className={`h-9 min-w-[106px] px-2.5 rounded-xl text-xs font-medium inline-flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
+                      isExpanded
+                        ? 'bg-[#D4AF37] text-[#09090B]'
+                        : 'bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-[#D4AF37]'
+                    }`}
+                  >
+                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{isExpanded ? 'Akordion Kapat' : 'Akordion Aç'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => toggleFavoriteArtist(artist.id)}
                     aria-label="Sanatçıyı favorilere ekle"
-                    className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors ${
+                    className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors shrink-0 ${
                       isFav ? 'text-[#D4AF37] bg-[#D4AF37]/10' : 'text-[#8C887F] hover:text-[#F5F2EB] hover:bg-white/[0.05]'
                     }`}
                   >
@@ -580,7 +588,7 @@ export const ArtistsScreen: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate({ name: 'artist_detail', artistId: artist.id })}
-                    className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#F5F2EB] transition-colors whitespace-nowrap hidden sm:inline-flex items-center"
+                    className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-[#F5F2EB] transition-colors whitespace-nowrap hidden sm:inline-flex items-center justify-center"
                   >
                     Detay Sayfası
                   </button>
@@ -1258,12 +1266,12 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
           <h1 className="text-2xl sm:text-3xl font-bold text-[#F5F2EB]">{title}</h1>
           {category && <p className="text-sm text-[#9B978E]">{category.subtitle}</p>}
 
-          <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 pt-1">
+          <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-stretch lg:items-center gap-2.5 pt-1">
             <button
               type="button"
               disabled={filteredTracks.length === 0}
               onClick={() => void playQueue(filteredTracks, false)}
-              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#D4AF37] disabled:opacity-40 hover:bg-[#E5C158] text-[#09090B] text-sm font-semibold transition-colors whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-[#D4AF37] disabled:opacity-40 hover:bg-[#E5C158] text-[#09090B] text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap"
             >
               <Play className="w-4 h-4 fill-current shrink-0" />
               Sıralı Çal
@@ -1272,7 +1280,7 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
               type="button"
               disabled={filteredTracks.length === 0}
               onClick={() => void playQueue(filteredTracks, true)}
-              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.05] disabled:opacity-40 hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-white/[0.05] disabled:opacity-40 hover:bg-white/[0.1] border border-white/10 text-xs sm:text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
             >
               <Shuffle className="w-4 h-4 text-[#D4AF37] shrink-0" />
               Karışık Çal
@@ -1294,10 +1302,10 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs sm:text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
             >
               <Upload className="w-4 h-4 text-[#D4AF37] shrink-0" />
-              Telefondan Ses Yükle
+              <span className="truncate">Telefondan Yükle</span>
             </button>
 
             {categoryId && downloadableTracks.length > 0 && (
@@ -1312,16 +1320,18 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
                     setDownloadingCategory(false);
                   }
                 }}
-                className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.06] hover:bg-white/[0.11] disabled:opacity-50 border border-[#D4AF37]/30 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.11] disabled:opacity-50 border border-[#D4AF37]/30 text-xs sm:text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
               >
                 {downloadingCategory ? (
                   <Loader2 className="w-4 h-4 animate-spin text-[#D4AF37] shrink-0" />
                 ) : (
                   <Download className="w-4 h-4 text-[#D4AF37] shrink-0" />
                 )}
-                {remainingDownloadCount > 0
-                  ? `Kategoriyi İndir (${remainingDownloadCount})`
-                  : 'Tümü Çevrimdışı İndirildi'}
+                <span className="truncate">
+                  {remainingDownloadCount > 0
+                    ? `Tümünü İndir (${remainingDownloadCount})`
+                    : 'Tümü İndirildi'}
+                </span>
               </button>
             )}
           </div>
