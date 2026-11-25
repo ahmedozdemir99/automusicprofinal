@@ -113,12 +113,12 @@ export const QuranHubScreen: React.FC<{ initialShowReciters?: boolean }> = ({
 
   return (
     <div className="space-y-8 pb-10">
-      <section className="rounded-2xl border border-[#D4AF37]/30 bg-[#121216] p-4 space-y-3">
-        <div className="flex items-center gap-3"><BookOpen className="w-5 h-5 shrink-0 text-[#D4AF37]"/><div className="min-w-0"><h2 className="font-semibold text-[#E5C158]">Hatim Takibim</h2><p className="text-xs text-[#A8A49B]">{hatimPoint ? `${SURAHS.find(s => s.number === hatimPoint.surah)?.nameTr || ''} · ${formatDuration(hatimPoint.positionSec)}` : 'Fatiha Suresi ile başla'}</p></div></div>
-        <div className="grid grid-cols-2 gap-2 text-xs text-[#A8A49B]"><div className="rounded-xl bg-white/[0.04] p-3">Sure başlangıç sayfası <strong className="block text-sm text-[#F5F2EB]">{hatimStartPage} / 604</strong></div><div className="rounded-xl bg-white/[0.04] p-3">Sayfa bazlı alt sınır <strong className="block text-sm text-[#E5C158]">%{hatimPercent}</strong></div></div>
-        <div className="h-2 rounded-full bg-white/10 overflow-hidden"><div className="h-full bg-[#D4AF37]" style={{width: `${hatimPercent}%`}} /></div>
+      <section className="rounded-2xl border border-[#D4AF37]/30 bg-[#121216] p-3 space-y-2">
+        <div className="flex items-center gap-2"><BookOpen className="w-4 h-4 shrink-0 text-[#D4AF37]"/><div className="min-w-0"><h2 className="text-sm font-semibold text-[#E5C158]">Hatim Takibim</h2><p className="text-xs text-[#A8A49B]">{hatimPoint ? `${SURAHS.find(s => s.number === hatimPoint.surah)?.nameTr || ''} · ${formatDuration(hatimPoint.positionSec)}` : 'Fatiha Suresi ile başla'}</p></div></div>
+        <div className="grid grid-cols-2 gap-2 text-xs text-[#A8A49B]"><div className="rounded-lg bg-white/[0.04] px-2 py-1.5">Sure başlangıç sayfası <strong className="block text-xs text-[#F5F2EB]">{hatimStartPage} / 604</strong></div><div className="rounded-lg bg-white/[0.04] px-2 py-1.5">Sayfa bazlı alt sınır <strong className="block text-xs text-[#E5C158]">%{hatimPercent}</strong></div></div>
+        <div className="h-1 rounded-full bg-white/10 overflow-hidden"><div className="h-full bg-[#D4AF37]" style={{width: `${hatimPercent}%`}} /></div>
         <p className="text-xs text-[#A8A49B]">Kâri: <span className="text-[#F5F2EB]">{hatimReciter.nameTr}</span> · Medine mushafı, sure başlangıcına göre</p>
-        <button type="button" onClick={() => void startHatim()} className="w-full min-h-11 px-3 py-2 rounded-xl bg-[#D4AF37] text-[#09090B] text-sm font-semibold flex items-center justify-center gap-2"><Play className="w-4 h-4 shrink-0 fill-current"/>{hatimPoint ? 'Hatme Devam Et' : 'Hatme Başla'}</button>
+        <button type="button" onClick={() => void startHatim()} className="w-full min-h-10 px-3 py-1.5 rounded-xl bg-[#D4AF37] text-[#09090B] text-sm font-semibold flex items-center justify-center gap-2"><Play className="w-4 h-4 shrink-0 fill-current"/>{hatimPoint ? 'Hatme Devam Et' : 'Hatme Başla'}</button>
         <p className="text-xs text-[#A8A49B]">Serbest sure dinleme hatim kaydını değiştirmez.</p>
       </section>
       {/* Header & Active Reciter Banner — Strictly Aligned Uniform Buttons */}
