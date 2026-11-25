@@ -25,48 +25,48 @@ export const EQ_PRESETS: Record<EqPresetId, EqPresetDefinition> = {
   },
   car: {
     label: 'Araç Profili',
-    description: 'Yol gürültüsünü dengeleyen derin bas ve net vokal',
-    bandsDb: [3.5, 4, 2.5, 1, 0, 1, 2.5, 3, 2, 1.5],
+    description: 'Yol gürültüsünü dengeleyen temiz bas ve net vokal',
+    bandsDb: [2.5, 3, 2, 0.5, 0, 1, 2, 2.5, 1.5, 1],
     preampDb: 0,
-    bassBoostDb: 3.5,
-    trebleBoostDb: 1.5,
+    bassBoostDb: 1.5,
+    trebleBoostDb: 1,
   },
   headphones: {
     label: 'Kulaklık',
-    description: 'Geniş sahne ve dengeli üst frekans detayları',
-    bandsDb: [2, 2.5, 1.5, 0.5, 0, 0.5, 1.5, 2.5, 3, 2.5],
+    description: 'Geniş sahne ve berrak üst frekans detayları',
+    bandsDb: [1.5, 2, 1, 0, 0, 0.5, 1.5, 2, 2.5, 2],
     preampDb: 0,
-    bassBoostDb: 1.5,
-    trebleBoostDb: 2,
+    bassBoostDb: 1,
+    trebleBoostDb: 1,
   },
   pop: {
     label: 'Pop',
-    description: 'Parlak vokal ve enerjik alt-üst frekans dengesi',
-    bandsDb: [-1, 1.5, 3.5, 4, 2, -0.5, -1, 1.5, 3, 3.5],
+    description: 'Parlak vokal ve dengeli ritim vurgusu',
+    bandsDb: [-0.5, 1.5, 2.5, 3, 1.5, 0, -0.5, 1.5, 2.5, 2.5],
     preampDb: 0,
-    bassBoostDb: 2,
-    trebleBoostDb: 2,
+    bassBoostDb: 1,
+    trebleBoostDb: 1,
   },
   rock: {
     label: 'Rock',
-    description: 'Güçlü elektro gitar, tok davul ve canlı orta frekans',
-    bandsDb: [4.5, 3.5, 2, 0.5, -1, 0.5, 2.5, 4, 4.5, 3.5],
+    description: 'Güçlü elektro gitar, tok davul ve net orta frekans',
+    bandsDb: [3.5, 3, 1.5, 0, -1, 0.5, 2, 3, 3.5, 2.5],
     preampDb: -0.5,
-    bassBoostDb: 3,
-    trebleBoostDb: 2.5,
+    bassBoostDb: 1.5,
+    trebleBoostDb: 1.5,
   },
   arabesk: {
     label: 'Arabesk',
     description: 'Sıcak yaylılar, derin bas ve duygulu vokal vurgusu',
-    bandsDb: [3, 4, 3, 1.5, 1, 2.5, 3, 2, 1.5, 1],
+    bandsDb: [2, 3, 2, 1, 0.5, 2, 2.5, 1.5, 1, 0.5],
     preampDb: -0.5,
-    bassBoostDb: 3.5,
-    trebleBoostDb: 1,
+    bassBoostDb: 2,
+    trebleBoostDb: 0.5,
   },
   vocal: {
     label: 'Vokal',
     description: 'İnsan sesini öne çıkaran berrak orta frekans dengesi',
-    bandsDb: [-2, -1, 0, 2, 4, 4.5, 3.5, 2, 1, 0],
+    bandsDb: [-2, -1, 0, 2, 3.5, 4, 3, 1.5, 1, 0],
     preampDb: 0,
     bassBoostDb: 0,
     trebleBoostDb: 1,
@@ -74,33 +74,33 @@ export const EQ_PRESETS: Record<EqPresetId, EqPresetDefinition> = {
   classic: {
     label: 'Klasik',
     description: 'Enstrümantal derinlik ve doğal salon tınısı',
-    bandsDb: [3, 2.5, 1.5, 1, 0, 0, 1, 2, 3, 3.5],
+    bandsDb: [2, 2, 1, 0.5, 0, 0, 1, 1.5, 2.5, 3],
     preampDb: 0,
-    bassBoostDb: 1,
-    trebleBoostDb: 1.5,
+    bassBoostDb: 0.5,
+    trebleBoostDb: 1,
   },
   vocal_quran: {
     label: "Kur'an Tilaveti",
     description: 'Tilavet ve harf mahreçleri için kristal vokal netliği',
-    bandsDb: [-2, -1, 0, 1.5, 3.5, 4, 3, 2, 1, 0],
+    bandsDb: [-2, -1, 0, 1.5, 3, 3.5, 2.5, 1.5, 1, 0],
     preampDb: 0,
     bassBoostDb: 0,
-    trebleBoostDb: 1.5,
+    trebleBoostDb: 1,
   },
   tasavvuf: {
     label: 'Tasavvuf',
     description: 'Ney, ud ve bendir için sıcak akustik denge',
-    bandsDb: [1.5, 2.5, 2.5, 2, 1.5, 2, 1.5, 1, 2, 1.5],
+    bandsDb: [1, 2, 2, 1.5, 1, 1.5, 1.5, 1, 1.5, 1],
     preampDb: 0,
-    bassBoostDb: 1.5,
-    trebleBoostDb: 1,
+    bassBoostDb: 1,
+    trebleBoostDb: 0.5,
   },
   bass_boost: {
     label: 'Bas Güçlendirici',
-    description: 'Alt frekanslarda güçlü ve tok vurgu',
-    bandsDb: [6, 5.5, 4, 2, 0, 0, 0.5, 1, 1.5, 1],
+    description: 'Alt frekanslarda kontrollü ve güçlü vurgu',
+    bandsDb: [4.5, 4, 3, 1.5, 0, 0, 0.5, 1, 1, 0.5],
     preampDb: -1.5,
-    bassBoostDb: 6,
+    bassBoostDb: 3.5,
     trebleBoostDb: 0,
   },
   custom: {
@@ -286,16 +286,16 @@ export class AutoMusicAudioEngine {
       // Anti-hiss gentle low-pass filter at 18kHz to remove digital high-frequency MP3 compression noise
       const antiHissFilter = this.ctx.createBiquadFilter();
       antiHissFilter.type = 'lowpass';
-      antiHissFilter.frequency.value = 18000;
-      antiHissFilter.Q.value = 0.7;
+      antiHissFilter.frequency.value = 18200;
+      antiHissFilter.Q.value = 0.65;
 
-      // Ultra-transparent volume leveler (gentle musical compression)
+      // Ultra-transparent volume leveler (gentle musical mastering compression without bass pumping)
       this.compressor = this.ctx.createDynamicsCompressor();
-      this.compressor.threshold.value = -22;
-      this.compressor.knee.value = 28;
-      this.compressor.ratio.value = 2.2;
-      this.compressor.attack.value = 0.012;
-      this.compressor.release.value = 0.25;
+      this.compressor.threshold.value = -15;
+      this.compressor.knee.value = 24;
+      this.compressor.ratio.value = 1.9;
+      this.compressor.attack.value = 0.02;
+      this.compressor.release.value = 0.28;
 
       // Brickwall anti-clipping safety limiter (-0.4 dB ceiling to eliminate any digital clipping distortion)
       this.limiter = this.ctx.createDynamicsCompressor();
@@ -392,9 +392,14 @@ export class AutoMusicAudioEngine {
     const now = this.ctx.currentTime;
     const active = settings.enabled;
 
-    // Auto-headroom compensation when user boosts heavily so distortion/clipping is prevented
-    const maxBandBoost = active ? Math.max(0, ...settings.bandsDb, settings.bassBoostDb) : 0;
-    const autoHeadroomDb = active && maxBandBoost > 4 ? -(maxBandBoost - 4) * 0.35 : 0;
+    // Cumulative headroom compensation accounting for stacked bass/treble shelves + 10-band EQ
+    const lowCumulative = (settings.bandsDb[0] ?? 0) + settings.bassBoostDb;
+    const midLowCumulative = (settings.bandsDb[1] ?? 0) + settings.bassBoostDb * 0.7;
+    const highCumulative = (settings.bandsDb[9] ?? 0) + settings.trebleBoostDb;
+    const peakBoostDb = active
+      ? Math.max(0, ...settings.bandsDb, lowCumulative, midLowCumulative, highCumulative)
+      : 0;
+    const autoHeadroomDb = active && peakBoostDb > 3 ? -(peakBoostDb - 3) * 0.45 : 0;
     const totalPreampDb = active ? Math.max(-12, Math.min(10, settings.preampDb + autoHeadroomDb)) : 0;
 
     if (this.preampNode) {
@@ -416,8 +421,8 @@ export class AutoMusicAudioEngine {
 
     if (this.compressor) {
       if (active && settings.volumeLeveler) {
-        this.compressor.threshold.setTargetAtTime(-18, now, 0.05);
-        this.compressor.ratio.setTargetAtTime(3.2, now, 0.05);
+        this.compressor.threshold.setTargetAtTime(-15, now, 0.05);
+        this.compressor.ratio.setTargetAtTime(2.1, now, 0.05);
       } else {
         // Effectively transparent bypass
         this.compressor.threshold.setTargetAtTime(0, now, 0.05);
@@ -489,6 +494,27 @@ export class AutoMusicAudioEngine {
    */
   get isHighPassActive(): boolean {
     return Boolean(this.highPassFilter && this.dspConnected);
+  }
+
+  /**
+   * Returns honest, real-time audio engine diagnostics for the Audio Settings screen.
+   */
+  getDspTelemetry(): {
+    dspActive: boolean;
+    sampleRate: number;
+    highPassHz: number;
+    antiHissHz: number;
+    limiterThresholdDb: number;
+    bufferedAheadSec: number;
+  } {
+    return {
+      dspActive: this.isDspActive,
+      sampleRate: this.ctx?.sampleRate ?? 48000,
+      highPassHz: this.highPassFilter?.frequency.value ?? 28,
+      antiHissHz: 18200,
+      limiterThresholdDb: -0.4,
+      bufferedAheadSec: Math.round(this.getBufferedAheadSeconds() * 10) / 10,
+    };
   }
 
   /**

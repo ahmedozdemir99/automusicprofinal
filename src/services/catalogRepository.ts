@@ -203,6 +203,7 @@ export class DatabaseCatalogRepository {
 
     try {
       const params = new URLSearchParams({
+        q: category.archiveQuery || category.name,
         categoryId: category.id,
         language: category.language,
         genre: category.genre,
@@ -232,6 +233,36 @@ export class DatabaseCatalogRepository {
         tracks: dbTracks,
         notice: dbNotice || 'Müzik kataloğuna şu anda ulaşılamıyor.',
       };
+    }
+  }
+
+  async discoverMoreCategoryTracks(
+    category: MusicCategory,
+    offset = 0
+  ): Promise<{ tracks: MediaItem[]; hasMore: boolean; notice?: string }> {
+    const query = category.archiveQuery || category.name;
+    const params = new URLSearchParams({
+      q: query,
+      categoryId: category.id,
+      language: category.language,
+      genre: category.genre,
+      motif: category.motif,
+      offset: String(offset),
+    });
+    try {
+      const res = await fetch(`/api/catalog/open-music?${params.toString()}`);
+      if (!res.ok) {
+        return { tracks: [], hasMore: false, notice: 'Çevrimiçi katalogdan yeni parça getirilemedi.' };
+      }
+      const data = (await res.json()) as { tracks?: MediaItem[]; hasMore?: boolean; notice?: string };
+      const tracks = (data.tracks ?? []).filter((t) => !!t.streamUrl);
+      return {
+        tracks,
+        hasMore: Boolean(data.hasMore),
+        notice: data.notice,
+      };
+    } catch {
+      return { tracks: [], hasMore: false, notice: 'Çevrimiçi kataloga şu an ulaşılamıyor.' };
     }
   }
 

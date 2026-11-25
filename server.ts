@@ -157,6 +157,20 @@ function isLikelyUploaderHandle(name: string): boolean {
   return false;
 }
 
+function getSearchAudioQualityScore(filename: string, rawBitrate?: string): number {
+  const lower = filename.toLowerCase();
+  if (/(?:_64kb|_32kb|_48kb|64kbps|32kbps|48kbps)/.test(lower)) return -1;
+  const parsedBitrate = rawBitrate ? Number.parseFloat(rawBitrate) : 0;
+  if (Number.isFinite(parsedBitrate) && parsedBitrate > 0 && parsedBitrate < 96) {
+    return -1;
+  }
+  const bitrateBonus = Number.isFinite(parsedBitrate) && parsedBitrate >= 96 ? Math.min(320, Math.round(parsedBitrate)) : 160;
+  if (lower.endsWith('.mp3')) return 3000 + bitrateBonus;
+  if (lower.endsWith('.flac')) return 2500 + bitrateBonus;
+  if (lower.endsWith('.ogg')) return 1500 + bitrateBonus;
+  return 0;
+}
+
 async function searchInternetArchive(
   query: string,
   categoryId: string,
@@ -165,7 +179,7 @@ async function searchInternetArchive(
   motif: string,
   offset: number
 ): Promise<Array<Record<string, unknown>>> {
-  const page = Math.floor(offset / 6) + 1;
+  const page = Math.floor(offset / 8) + 1;
   const searchUrl = new URL('https://archive.org/advancedsearch.php');
   const safeQ = query.replace(/["\\():]/g, ' ').trim();
   searchUrl.searchParams.set(
@@ -176,7 +190,7 @@ async function searchInternetArchive(
   searchUrl.searchParams.append('fl[]', 'title');
   searchUrl.searchParams.append('fl[]', 'creator');
   searchUrl.searchParams.append('fl[]', 'year');
-  searchUrl.searchParams.set('rows', '6');
+  searchUrl.searchParams.set('rows', '8');
   searchUrl.searchParams.set('page', String(page));
   searchUrl.searchParams.set('output', 'json');
 
@@ -191,7 +205,7 @@ async function searchInternetArchive(
       docs?: Array<{ identifier: string; title?: string | string[]; creator?: string | string[]; year?: string | number }>;
     };
   };
-  const docs = (iaJson.response?.docs ?? []).slice(0, 5);
+  const docs = (iaJson.response?.docs ?? []).slice(0, 7);
   const settled = await Promise.allSettled(
     docs.map(async (doc) => {
       const metaRes = await fetch(`https://archive.org/metadata/${encodeURIComponent(doc.identifier)}/files`, {
@@ -202,16 +216,28 @@ async function searchInternetArchive(
       const metaJson = (await metaRes.json()) as {
         result?: Array<{ name?: string; length?: string; bitrate?: string; title?: string; artist?: string; album?: string }>;
       };
-      const files = (metaJson.result ?? [])
-        .filter(
-          (f) =>
-            f.name &&
-            /\.(mp3|ogg|flac)$/i.test(f.name) &&
-            !f.name.includes('_64kb') &&
-            !f.name.startsWith('__') &&
-            !/(sample|preview|spectrogram|_meta)/i.test(f.name)
-        )
-        .slice(0, 4);
+
+      const bestByStem = new Map<
+        string,
+        { file: { name?: string; length?: string; bitrate?: string; title?: string; artist?: string; album?: string }; score: number }
+      >();
+
+      for (const f of metaJson.result ?? []) {
+        if (!f.name || !/\.(mp3|ogg|flac)$/i.test(f.name) || f.name.startsWith('__')) continue;
+        if (/(sample|preview|spectrogram|_meta)/i.test(f.name)) continue;
+        const score = getSearchAudioQualityScore(f.name, f.bitrate);
+        if (score < 0) continue;
+        const stem = f.name.replace(/_(vbr|64kb|128kb|192kb|256kb|320kb)?\.(mp3|ogg|flac)$/i, '').toLowerCase();
+        const prev = bestByStem.get(stem);
+        if (!prev || score > prev.score) {
+          bestByStem.set(stem, { file: f, score });
+        }
+      }
+
+      const files = Array.from(bestByStem.values())
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 6)
+        .map((x) => x.file);
       return { doc, files };
     })
   );
@@ -234,6 +260,7 @@ async function searchInternetArchive(
       const title = cleanTrackTitle(file.title || file.name, docTitle);
       const rawArtist = file.artist || rawCreator;
       const artistName = isLikelyUploaderHandle(rawArtist) ? (docTitle.split(/[-—]/)[0]?.trim() || 'Açık Arşiv') : rawArtist.trim();
+      const parsedBitrate = file.bitrate ? Math.round(Number.parseFloat(file.bitrate)) : 0;
       tracks.push({
         contentId: `ia:${doc.identifier}:${file.name}`,
         title,
@@ -248,7 +275,7 @@ async function searchInternetArchive(
         sourceProvider: 'internet_archive',
         downloadAllowed: true,
         licenseName: 'Internet Archive Açık Arşiv',
-        bitrateKbps: file.bitrate ? Math.round(Number.parseFloat(file.bitrate)) || 192 : 192,
+        bitrateKbps: parsedBitrate >= 96 ? parsedBitrate : 192,
         format: ext === 'FLAC' ? 'FLAC' : ext === 'OGG' ? 'OGG' : 'MP3',
         motif,
         coverUrl,

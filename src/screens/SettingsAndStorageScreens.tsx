@@ -321,6 +321,7 @@ export const AudioSettingsScreen: React.FC = () => {
     eqSettings,
     isEqSupported,
     isPlaying,
+    currentTrack,
     updateEqSettings,
     applyEqPreset,
     setEqBand,
@@ -331,7 +332,16 @@ export const AudioSettingsScreen: React.FC = () => {
   } = useAutoMusic();
 
   const [newProfileName, setNewProfileName] = useState('');
+  const [telemetry, setTelemetry] = useState(() => sharedAudioEngine.getDspTelemetry());
   const spectrumRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    setTelemetry(sharedAudioEngine.getDspTelemetry());
+    const timer = window.setInterval(() => {
+      setTelemetry(sharedAudioEngine.getDspTelemetry());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isPlaying, eqSettings.enabled, currentTrack?.contentId]);
 
   useEffect(() => {
     let rafId = 0;
@@ -574,6 +584,45 @@ export const AudioSettingsScreen: React.FC = () => {
             <h2 className="text-base font-semibold text-[#F5F2EB]">Dahili DSP Filtreleri ve Kesintisiz Akış Motoru</h2>
             <p className="text-xs text-[#9B978E]">
               Doğrudan Web Audio API donanım hızlandırmalı ses işleme hattına entegre koruyucular
+            </p>
+          </div>
+        </div>
+
+        {/* Live Audio Quality Diagnostics */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          <div className="p-3.5 rounded-2xl bg-[#0A0A0D] border border-[#D4AF37]/25 space-y-1">
+            <p className="text-[11px] text-[#9B978E]">Ses İşleme Motoru</p>
+            <p className="text-xs font-semibold text-[#F5F2EB]">
+              {telemetry.dspActive ? 'Web Audio DSP Aktif' : 'Doğal Donanım Çıkışı'}
+            </p>
+            <p className="text-[11px] font-mono tabular-nums text-[#D4AF37]">{telemetry.sampleRate} Hz</p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#0A0A0D] border border-white/[0.07] space-y-1">
+            <p className="text-[11px] text-[#9B978E]">Aktif Kaynak Kalitesi</p>
+            <p className="text-xs font-semibold text-[#F5F2EB] truncate">
+              {currentTrack
+                ? `${currentTrack.format}${currentTrack.bitrateKbps ? ` · ${currentTrack.bitrateKbps} kbps` : ''}`
+                : 'Beklemede'}
+            </p>
+            <p className="text-[11px] text-emerald-400">Alt Sınır: &ge; 96 kbps Filtreli</p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#0A0A0D] border border-white/[0.07] space-y-1">
+            <p className="text-[11px] text-[#9B978E]">Tampon Güvenlik Payı</p>
+            <p className="text-xs font-semibold font-mono tabular-nums text-[#F5F2EB]">
+              {telemetry.bufferedAheadSec.toFixed(1)} sn hazır
+            </p>
+            <p className="text-[11px] text-[#8C887F]">Hedef: 2.5 sn akış koruması</p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#0A0A0D] border border-white/[0.07] space-y-1">
+            <p className="text-[11px] text-[#9B978E]">Frekans &amp; Patlama Sınırı</p>
+            <p className="text-xs font-semibold font-mono tabular-nums text-[#F5F2EB]">
+              {Math.round(telemetry.highPassHz)} Hz – {(telemetry.antiHissHz / 1000).toFixed(1)} kHz
+            </p>
+            <p className="text-[11px] font-mono tabular-nums text-[#D4AF37]">
+              Tavan: {telemetry.limiterThresholdDb} dB
             </p>
           </div>
         </div>

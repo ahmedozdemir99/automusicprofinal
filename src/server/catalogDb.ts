@@ -22,106 +22,207 @@ export interface VerifiedArchiveSource {
   maxFiles?: number;
 }
 
-const CATALOG_DATA_VERSION = '5';
+const CATALOG_DATA_VERSION = '6';
 
 // Verified HTTP-200 Turkish, Karadeniz, Arabesk, Fantezi, Rock, Pop, Spiritual & Arabic Internet Archive collections
 export const VERIFIED_CATEGORY_ARCHIVES: Record<string, VerifiedArchiveSource[]> = {
   nostalji: [
+    { identifier: '001.-zeki-muren-hayat-opucugu-1984-full-album', artistDisplay: 'Zeki Müren', albumDisplay: 'Hayat Öpücüğü', year: '1984', maxFiles: 12 },
+    { identifier: '001.-zeki-muren-zirvedeki-sarkilar-full-album-80-ler', artistDisplay: 'Zeki Müren', albumDisplay: 'Zirvedeki Şarkılar', year: '1985', maxFiles: 12 },
+    { identifier: '005.-zeki-muren-gozlerin-doguyor-gecelerime-turk-sanat-muzigi', artistDisplay: 'Zeki Müren', albumDisplay: 'Gözlerin Doğuyor Gecelerime', maxFiles: 8 },
     { identifier: 'OBenimteMZeyyenSenar', artistDisplay: 'Müzeyyen Senar', albumDisplay: 'Taş Plak Seçkisi', year: '1960' },
+    { identifier: 'dalgalandimda-duruldum-muzeyyen-senar-ve-nilufer', artistDisplay: 'Müzeyyen Senar & Nilüfer', albumDisplay: 'Dalgalandım da Duruldum' },
     { identifier: 'SafiyeAyla', artistDisplay: 'Safiye Ayla', albumDisplay: 'Eski Plaklar', year: '1958' },
     { identifier: 'hamiyet-yuceses-bakmiyor-cesmi-siyah-tas-plak', artistDisplay: 'Hamiyet Yüceses', albumDisplay: 'Taş Plak Arşivi', year: '1955' },
     { identifier: 'hayat-genclik-boyunca', artistDisplay: 'Münir Nurettin Selçuk', albumDisplay: 'Nostalji Klasikleri', year: '1952' },
-    { identifier: 'Nilufer', artistDisplay: 'Nilüfer', albumDisplay: 'Klasik Seçki', year: '1978', maxFiles: 4 },
+    { identifier: '78_bekar-sarkisi_mediha-zeki-hanim-mildan-niyazi-bey_gbia0285982a', artistDisplay: 'Mediha Zeki Hanım', albumDisplay: '78 Devir Taş Plak' },
+    { identifier: 'Nilufer', artistDisplay: 'Nilüfer', albumDisplay: 'Klasik Seçki', year: '1978', maxFiles: 6 },
   ],
   karadeniz: [
-    { identifier: 'kazim-koyuncu-hayde', artistDisplay: 'Kazım Koyuncu', albumDisplay: 'Hayde', year: '2004', maxFiles: 4 },
-    { identifier: 'VolkanKonak', artistDisplay: 'Volkan Konak', albumDisplay: 'Karadeniz Seçkisi', maxFiles: 6 },
-    { identifier: '2011BirolTopaloglu-kiyiBoyuKaradeniz', artistDisplay: 'Birol Topaloğlu', albumDisplay: 'Kıyı Boyu Karadeniz', year: '2011', maxFiles: 8 },
-    { identifier: 'gun-gelir', artistDisplay: 'Karadeniz Akustik', albumDisplay: 'Yayla Ezgileri', maxFiles: 4 },
+    { identifier: 'y-2mate.com-kazim-koyuncu-hayde-full-album-2004-6-his-09-jnwq', artistDisplay: 'Kazım Koyuncu', albumDisplay: 'Hayde', year: '2004', maxFiles: 16 },
+    { identifier: 'kazim-koyuncu-hayde', artistDisplay: 'Kazım Koyuncu', albumDisplay: 'Hayde Seçkisi', year: '2004', maxFiles: 6 },
+    { identifier: 'VolkanKonak', artistDisplay: 'Volkan Konak', albumDisplay: 'Karadeniz Seçkisi', maxFiles: 10 },
+    { identifier: '2011BirolTopaloglu-kiyiBoyuKaradeniz', artistDisplay: 'Birol Topaloğlu', albumDisplay: 'Kıyı Boyu Karadeniz', year: '2011', maxFiles: 12 },
+    { identifier: 'gun-gelir', artistDisplay: 'Karadeniz Akustik', albumDisplay: 'Yayla Ezgileri', maxFiles: 6 },
+    { identifier: 'hizlikemencekaradenizhoronhavasi', artistDisplay: 'Karadeniz Kemençe', albumDisplay: 'Horon Havası' },
+    { identifier: 'KaradenizMzikVeSanatFestivali_807', artistDisplay: 'Karadeniz Sanat Topluluğu', albumDisplay: 'Karadeniz Festivali' },
+    { identifier: 'TulumcuLidulidu', artistDisplay: 'Karadeniz Tulum', albumDisplay: 'Lidu Lidu Horon' },
   ],
   arapca: [
+    { identifier: 'umm-kulthum-anthologie-de-la-musique-arabe-vol.-iv', artistDisplay: 'Ümmü Gülsüm (Umm Kulthum)', albumDisplay: 'Anthologie Vol. IV', maxFiles: 10 },
+    { identifier: 'umm-kulthum-anthologie-de-la-musique-arabe-vol.-vi', artistDisplay: 'Ümmü Gülsüm (Umm Kulthum)', albumDisplay: 'Anthologie Vol. VI', maxFiles: 10 },
     { identifier: 'y-2mate.com-haq-beladak-umm-kulthum', artistDisplay: 'Ümmü Gülsüm (Umm Kulthum)', albumDisplay: 'Klasik Arap Makamları' },
+    { identifier: 'umm-kulthum-beredak_202305', artistDisplay: 'Ümmü Gülsüm (Umm Kulthum)', albumDisplay: 'Beredak' },
+    { identifier: 'saaltak-habiby-fairuz', artistDisplay: 'Feyruz (Fairuz)', albumDisplay: 'Saaltak Habiby' },
+    { identifier: 'Fairuz-Raj3eenYaHawa', artistDisplay: 'Feyruz (Fairuz)', albumDisplay: 'Raj3een Ya Hawa' },
+    { identifier: 'y-2mate.com-leah-ana-bahebak-farid-al-atrash', artistDisplay: 'Ferid el-Atraş (Farid al-Atrash)', albumDisplay: 'Klasik Ud & Makam' },
     { identifier: '442010-10-04.halim_408', artistDisplay: 'Abdel Halim Hafez', albumDisplay: 'Klasik Arap Müziği' },
-    { identifier: 'hussein-abdel-halim', artistDisplay: 'Abdel Halim Hafez', albumDisplay: 'Seçme Arapça Eserler', maxFiles: 6 },
+    { identifier: 'hussein-abdel-halim', artistDisplay: 'Abdel Halim Hafez', albumDisplay: 'Seçme Arapça Eserler', maxFiles: 8 },
   ],
   azerice: [
     { identifier: 'HetGebouw-Azerbaijan_mugam', artistDisplay: 'Azerbaycan Muğam Topluluğu', albumDisplay: 'Muğam & Tar' },
-    { identifier: 'azerbaijanradio4', artistDisplay: 'Azerbaycan Radyo Arşivi', albumDisplay: 'Bakü Seçkisi' },
+    { identifier: 'Manin_tinisi_26_11_2017_alimQasimov', artistDisplay: 'Alim Qasimov', albumDisplay: 'Muğam Seçkisi', year: '2017' },
+    { identifier: 'shahin-novrasli-from-baku-to-new-york-city', artistDisplay: 'Shahin Novrasli', albumDisplay: 'From Baku', maxFiles: 10 },
+    { identifier: 'azerbaijanradio1', artistDisplay: 'Azerbaycan Radyo Arşivi', albumDisplay: 'Bakü Seçkisi 1' },
+    { identifier: 'azerbaijanradio4', artistDisplay: 'Azerbaycan Radyo Arşivi', albumDisplay: 'Bakü Seçkisi 4' },
     { identifier: 'azerbaijanradio5', artistDisplay: 'Azerbaycan Halk Müziği', albumDisplay: 'Geleneksel Ezgiler' },
+    { identifier: 'azerbaijanradio7', artistDisplay: 'Azerbaycan Halk Müziği', albumDisplay: 'Bakü Seçkisi 7' },
   ],
   lazca: [
+    { identifier: '06-07-svetley-lazuri_202007', artistDisplay: 'Lazuri Folk Arşivi', albumDisplay: 'Lazca Eserler Seçkisi', maxFiles: 18 },
     { identifier: 'TunannBeriYann01.07.2000BirolTopaloglu', artistDisplay: 'Birol Topaloğlu', albumDisplay: 'Lazca & Doğu Karadeniz', year: '2000' },
-    { identifier: 'kazim-koyuncu-hayde', artistDisplay: 'Kazım Koyuncu', albumDisplay: 'Hayde (Karadeniz & Lazuri)', year: '2004', maxFiles: 4 },
+    { identifier: 'BirolTopaloglu-22.ekim2008-TunannBeriYan', artistDisplay: 'Birol Topaloğlu', albumDisplay: 'Tunanın Beri Yanı', year: '2008' },
+    { identifier: 'kazim-koyuncu-gulbeyaz-mp-3lerindir.co', artistDisplay: 'Kazım Koyuncu', albumDisplay: 'Gülbeyaz', maxFiles: 6 },
+    { identifier: 'kazim-koyuncu-hayde', artistDisplay: 'Kazım Koyuncu', albumDisplay: 'Hayde (Karadeniz & Lazuri)', year: '2004', maxFiles: 6 },
     { identifier: 'TulumHoron', artistDisplay: 'Karadeniz Tulum Topluluğu', albumDisplay: 'Tulum & Horon' },
-    { identifier: '2011BirolTopaloglu-kiyiBoyuKaradeniz', artistDisplay: 'Birol Topaloğlu', albumDisplay: 'Kıyı Boyu Lazuri', year: '2011', maxFiles: 6 },
+    { identifier: 'TUFOPS5TWINLAZURI', artistDisplay: 'Lazuri Tulum', albumDisplay: 'Lazca Geleneksel' },
+    { identifier: '2011BirolTopaloglu-kiyiBoyuKaradeniz', artistDisplay: 'Birol Topaloğlu', albumDisplay: 'Kıyı Boyu Lazuri', year: '2011', maxFiles: 8 },
   ],
   turkuler: [
-    { identifier: 'NesetErtasAcemKizi_201511', artistDisplay: 'Neşet Ertaş', albumDisplay: 'Bozkırın Tezenesi', maxFiles: 8 },
+    { identifier: 'NesetErtasAcemKizi_201511', artistDisplay: 'Neşet Ertaş', albumDisplay: 'Bozkırın Tezenesi', maxFiles: 12 },
+    { identifier: 'neset-ertas-seher-vakti-caldim-yarin-kapisin', artistDisplay: 'Neşet Ertaş', albumDisplay: 'Seher Vakti' },
+    { identifier: 'NesetErtasinArdndan', artistDisplay: 'Neşet Ertaş', albumDisplay: 'Anısına Türküler' },
+    { identifier: 'ayasyollari', artistDisplay: 'Anadolu Halk Müziği', albumDisplay: 'Ayaş Yolları & Türküler', maxFiles: 14 },
+    { identifier: 'musaeroglumihribanmp3160k', artistDisplay: 'Musa Eroğlu', albumDisplay: 'Mihriban' },
+    { identifier: 'Hoyrati-Alemde', artistDisplay: 'Anadolu Bozlak & Hoyrat', albumDisplay: 'Hoyrat Seçkisi' },
     { identifier: 'AltinTurkuler05.HerSabahHerSeher', artistDisplay: 'Anadolu Türkü Şenliği', albumDisplay: 'Altın Türküler' },
     { identifier: '20Nisan2018TrkDiyar', artistDisplay: 'Türkü Diyarı', albumDisplay: 'Bağlama Seçkisi' },
     { identifier: '25Mays2018TrkDiyar', artistDisplay: 'Türkü Diyarı', albumDisplay: 'Anadolu Halk Ezgileri' },
   ],
   arabesk: [
+    { identifier: 'MslmGrsesUsta', artistDisplay: 'Müslüm Gürses', albumDisplay: 'Usta', maxFiles: 10 },
+    { identifier: 'Muslum-Gurses', artistDisplay: 'Müslüm Gürses', albumDisplay: 'Seçme Eserler', maxFiles: 10 },
     { identifier: 'MslmGrsesSevYeterBalamalUzunVersiyon', artistDisplay: 'Müslüm Gürses', albumDisplay: 'Arabesk Klasikleri' },
+    { identifier: '002.-muslum-gurses-arama-beni', artistDisplay: 'Müslüm Gürses', albumDisplay: 'Arama Beni' },
+    { identifier: '006.-vesaire-muslum-gurses-official-audio-vesaire-muslumgurses-esen-muzik', artistDisplay: 'Müslüm Gürses', albumDisplay: 'Vesaire' },
+    { identifier: 'orhan-gencebay-batsin-bu-dunya-1976-lp', artistDisplay: 'Orhan Gencebay', albumDisplay: 'Batsın Bu Dünya', year: '1976', maxFiles: 10 },
+    { identifier: 'Orhan-Gencebay-Klasikleri', artistDisplay: 'Orhan Gencebay', albumDisplay: 'Klasikler', maxFiles: 10 },
     { identifier: '001.-ferdi-tayfur-haram-oldu-full-album-1986-orijinal-kaset-kayit', artistDisplay: 'Ferdi Tayfur', albumDisplay: 'Haram Oldu', year: '1986', maxFiles: 6 },
     { identifier: '001.-ferdi-tayfur-bende-ozledim-turkuola-1618-1982-ful-album', artistDisplay: 'Ferdi Tayfur', albumDisplay: 'Ben de Özledim', year: '1982', maxFiles: 6 },
-    { identifier: 'YlddzTilbeAKmkSakla2012OrjinalOrhanGencebayEleBirEmBr_201406', artistDisplay: 'Orhan Gencebay & Yıldız Tilbe', albumDisplay: 'Özel Arabesk' },
+    { identifier: '001.-ferdi-tayfur-yakti-beni-ful-album-efsane-kayit', artistDisplay: 'Ferdi Tayfur', albumDisplay: 'Yaktı Beni' },
+    { identifier: '005.-ibrahim-tatlises-usta_202204', artistDisplay: 'İbrahim Tatlıses', albumDisplay: 'Usta', maxFiles: 8 },
+    { identifier: '001.-ibrahim-tatlises-kralin-konseri-anilarim-full-albu-m_202301', artistDisplay: 'İbrahim Tatlıses', albumDisplay: 'Anılarım' },
     { identifier: 'seviyorum-seni-arabesk-pilakanto', artistDisplay: 'Türkçe Arabesk Seçkisi', albumDisplay: 'Gece Yolculuğu' },
   ],
   fantezi: [
     { identifier: 'YlddzTilbeAKmkSakla2012OrjinalOrhanGencebayEleBirEmBr_201406', artistDisplay: 'Yıldız Tilbe & Orhan Gencebay', albumDisplay: 'Fantezi Seçkisi', year: '2012' },
-    { identifier: '001.-ferdi-tayfur-bende-ozledim-turkuola-1618-1982-ful-album', artistDisplay: 'Ferdi Tayfur', albumDisplay: 'Ben de Özledim (Fantezi Klasik)', year: '1982', maxFiles: 4 },
-    { identifier: 'Nilufer', artistDisplay: 'Nilüfer', albumDisplay: 'Duygusal Fantezi & Pop', maxFiles: 4 },
-    { identifier: 'Sezen_Aksu_Fon_Mzikleri', artistDisplay: 'Sezen Aksu', albumDisplay: 'Duygusal Enstrümantal Seçki', maxFiles: 5 },
+    { identifier: 'YldzTilbeVeCezaTutsak', artistDisplay: 'Yıldız Tilbe', albumDisplay: 'Özel Seçki', maxFiles: 4 },
+    { identifier: 'ebru-gundes-azap', artistDisplay: 'Ebru Gündeş', albumDisplay: 'Azap' },
+    { identifier: 'ebru-gundes-soyleyin', artistDisplay: 'Ebru Gündeş', albumDisplay: 'Söyleyin' },
+    { identifier: 'ebrugundesmeyhaneci', artistDisplay: 'Ebru Gündeş', albumDisplay: 'Meyhaneci' },
+    { identifier: 'SibelCanTamamOZaman', artistDisplay: 'Sibel Can', albumDisplay: 'Tamam O Zaman' },
+    { identifier: 'cengiz-kurtoglu-hakan-altun-yorgun-yillarim-official-video_202403', artistDisplay: 'Cengiz Kurtoğlu & Hakan Altun', albumDisplay: 'Yorgun Yıllarım' },
+    { identifier: 'cengizkurtogluhakanaltunduyanlaraduymayanlaraofficialvideo', artistDisplay: 'Cengiz Kurtoğlu & Hakan Altun', albumDisplay: 'Duyanlara Duymayanlara' },
+    { identifier: 'gonul-yarasi-hakan-altun', artistDisplay: 'Hakan Altun', albumDisplay: 'Gönül Yarası' },
+    { identifier: 'cengizkurtoglugelinolmusgidiyorsun1986', artistDisplay: 'Cengiz Kurtoğlu', albumDisplay: 'Gelin Olmuş Gidiyorsun', year: '1986' },
+    { identifier: 'nefaydasivar', artistDisplay: 'Fantezi Klasikleri', albumDisplay: 'Ne Faydası Var' },
+    { identifier: '001.-ferdi-tayfur-bende-ozledim-turkuola-1618-1982-ful-album', artistDisplay: 'Ferdi Tayfur', albumDisplay: 'Ben de Özledim (Fantezi)', year: '1982', maxFiles: 4 },
+    { identifier: 'Sezen_Aksu_Fon_Mzikleri', artistDisplay: 'Sezen Aksu', albumDisplay: 'Duygusal Enstrümantal', maxFiles: 6 },
   ],
   turk_sanat: [
+    { identifier: '009.-bu-sensiz-ilk-gecem', artistDisplay: 'Türk Sanat Müziği Seçkisi', albumDisplay: 'Bu Sensiz İlk Gecem', maxFiles: 10 },
+    { identifier: '001.-zeki-muren-zirvedeki-sarkilar-full-album-80-ler', artistDisplay: 'Zeki Müren', albumDisplay: 'Zirvedeki Şarkılar', maxFiles: 10 },
+    { identifier: '005.-zeki-muren-gozlerin-doguyor-gecelerime-turk-sanat-muzigi', artistDisplay: 'Zeki Müren', albumDisplay: 'Gözlerin Doğuyor Gecelerime', maxFiles: 8 },
+    { identifier: '001.-zeki-mu-ren-doruktaki-nagmeler', artistDisplay: 'Zeki Müren', albumDisplay: 'Doruktaki Nağmeler' },
+    { identifier: '001.-zeki-muren-masal-official-audio', artistDisplay: 'Zeki Müren', albumDisplay: 'Masal' },
+    { identifier: '001.-zeki-mu-ren-batmayan-gunes', artistDisplay: 'Zeki Müren', albumDisplay: 'Batmayan Güneş' },
+    { identifier: '21.04.2016-turlu-murat-aydemir-tanburi', artistDisplay: 'Murat Aydemir', albumDisplay: 'Tanbur Taksimleri' },
     { identifier: 'hayat-genclik-boyunca', artistDisplay: 'Münir Nurettin Selçuk', albumDisplay: 'Klasik Türk Sanat Müziği' },
     { identifier: 'birgamlihazaninseherinde', artistDisplay: 'Münir Nurettin Selçuk', albumDisplay: 'Fasıl Makamları' },
     { identifier: 'OBenimteMZeyyenSenar', artistDisplay: 'Müzeyyen Senar', albumDisplay: 'Fasıl Seçkisi' },
     { identifier: 'SafiyeAyla', artistDisplay: 'Safiye Ayla', albumDisplay: 'Klasik Makamlar' },
   ],
   turk_pop: [
-    { identifier: 'Sezen_Aksu_Fon_Mzikleri', artistDisplay: 'Sezen Aksu', albumDisplay: 'Sezen Aksu Seçkisi', maxFiles: 8 },
-    { identifier: 'Nilufer', artistDisplay: 'Nilüfer', albumDisplay: 'Nilüfer Seçkisi', maxFiles: 4 },
+    { identifier: 'sezen_aksu_sen_aglama', artistDisplay: 'Sezen Aksu', albumDisplay: 'Sen Ağlama', year: '1984', maxFiles: 16 },
+    { identifier: 'Sezen_Aksu_Fon_Mzikleri', artistDisplay: 'Sezen Aksu', albumDisplay: 'Sezen Aksu Seçkisi', maxFiles: 10 },
+    { identifier: 'sezen-aksu-tukenecegiz', artistDisplay: 'Sezen Aksu', albumDisplay: 'Tükeneceğiz' },
+    { identifier: 'sezen-aksu-sinanay_202202', artistDisplay: 'Sezen Aksu', albumDisplay: 'Şinanay' },
+    { identifier: 'ceza-gelsin-hayat-bildigi-gibi-feat.-sezen-aksu-official-audio', artistDisplay: 'Ceza & Sezen Aksu', albumDisplay: 'Gelsin Hayat Bildiği Gibi' },
+    { identifier: 'Nilufer', artistDisplay: 'Nilüfer', albumDisplay: 'Nilüfer Seçkisi', maxFiles: 6 },
+    { identifier: 'tarkan-dudu_202510', artistDisplay: 'Tarkan', albumDisplay: 'Dudu', maxFiles: 6 },
+    { identifier: 'tarkan-ay', artistDisplay: 'Tarkan', albumDisplay: 'Ay' },
+    { identifier: 'tarkan-beni-cok-sev', artistDisplay: 'Tarkan', albumDisplay: 'Beni Çok Sev' },
+    { identifier: 'tarkan-gitti-gideli', artistDisplay: 'Tarkan', albumDisplay: 'Gitti Gideli' },
+    { identifier: 'tarkankuzukuzuoriginal_202001', artistDisplay: 'Tarkan', albumDisplay: 'Kuzu Kuzu' },
     { identifier: 'tarkan-vay-anam-vay_202305', artistDisplay: 'Tarkan', albumDisplay: 'Türkçe Pop Seçkisi' },
     { identifier: 'tarkan-ft.-mahmut-orhan-her-sey-fani', artistDisplay: 'Tarkan & Mahmut Orhan', albumDisplay: 'Modern Türkçe Pop' },
   ],
   turk_rock: [
-    { identifier: 'erkinkoray-elektronikturkuler1974', artistDisplay: 'Erkin Koray', albumDisplay: 'Elektronik Türküler', year: '1974', maxFiles: 8 },
-    { identifier: '0888-tur8ku', artistDisplay: 'Erkin Koray', albumDisplay: 'Elektronik Türküler & Singles', year: '1974', maxFiles: 8 },
-    { identifier: 'erkin-koray-1973-lp', artistDisplay: 'Erkin Koray', albumDisplay: 'Erkin Koray (1973 LP)', year: '1973', maxFiles: 8 },
-    { identifier: 'cemkaraca_edirdahan-safinaz', artistDisplay: 'Cem Karaca & Edirdahan', albumDisplay: 'Safinaz', year: '1978', maxFiles: 4 },
-    { identifier: 'barismancocemkaracauzunincebiryoldayim', artistDisplay: 'Barış Manço & Cem Karaca', albumDisplay: 'Uzun İnce Bir Yoldayım', maxFiles: 4 },
-    { identifier: 'baris-manco-sozum-meclisten-disari-flac', artistDisplay: 'Barış Manço', albumDisplay: 'Sözüm Meclisten Dışarı', year: '1981', maxFiles: 8 },
-    { identifier: 'baris-manco-2023-2023-1975', artistDisplay: 'Barış Manço', albumDisplay: '2023 Anadolu Rock', year: '1975', maxFiles: 6 },
+    { identifier: 'erkinkoray-elektronikturkuler1974', artistDisplay: 'Erkin Koray', albumDisplay: 'Elektronik Türküler', year: '1974', maxFiles: 10 },
+    { identifier: '0888-tur8ku', artistDisplay: 'Erkin Koray', albumDisplay: 'Elektronik Türküler & Singles', year: '1974', maxFiles: 10 },
+    { identifier: 'erkin-koray-1973-lp', artistDisplay: 'Erkin Koray', albumDisplay: 'Erkin Koray (1973 LP)', year: '1973', maxFiles: 10 },
+    { identifier: 'cemkaraca_edirdahan-safinaz', artistDisplay: 'Cem Karaca & Edirdahan', albumDisplay: 'Safinaz', year: '1978', maxFiles: 6 },
+    { identifier: 'barismancocemkaracauzunincebiryoldayim', artistDisplay: 'Barış Manço & Cem Karaca', albumDisplay: 'Uzun İnce Bir Yoldayım', maxFiles: 6 },
+    { identifier: 'baris-manco-sozum-meclisten-disari-flac', artistDisplay: 'Barış Manço', albumDisplay: 'Sözüm Meclisten Dışarı', year: '1981', maxFiles: 10 },
+    { identifier: 'baris-manco-2023-2023-1975', artistDisplay: 'Barış Manço', albumDisplay: '2023 Anadolu Rock', year: '1975', maxFiles: 8 },
   ],
   ozgun: [
+    { identifier: 'safak-turkusu-ahmet-kaya_202508', artistDisplay: 'Ahmet Kaya', albumDisplay: 'Şafak Türküsü', maxFiles: 14 },
+    { identifier: 'AHMETKAYANERDENBLECEKSNZ', artistDisplay: 'Ahmet Kaya', albumDisplay: 'Nereden Bileceksiniz Seçkisi', maxFiles: 14 },
     { identifier: 'AhmetKayaSoyle', artistDisplay: 'Ahmet Kaya', albumDisplay: 'Özgün Seçki' },
     { identifier: 'AhmetKayaKafamaSAkarGiderim', artistDisplay: 'Ahmet Kaya', albumDisplay: 'Seçme Eserler' },
-    { identifier: '03.-zulfu-livaneli-buyuk-insanlik', artistDisplay: 'Zülfü Livaneli', albumDisplay: 'Özgün Klasikler', maxFiles: 6 },
+    { identifier: '03.-zulfu-livaneli-buyuk-insanlik', artistDisplay: 'Zülfü Livaneli', albumDisplay: 'Özgün Klasikler', maxFiles: 8 },
     { identifier: 'zulfu-livaneli-gozlerin', artistDisplay: 'Zülfü Livaneli', albumDisplay: 'Akustik Özgün' },
+    { identifier: 'ruhi-su', artistDisplay: 'Ruhi Su', albumDisplay: 'Anadolu Özgün Arşivi', maxFiles: 12 },
+    { identifier: 'spoti-downloader.com-siyrilip-gelen', artistDisplay: 'Grup Yorum', albumDisplay: 'Sıyrılıp Gelen', maxFiles: 11 },
+    { identifier: 'mp3indirdur-Edip-Akbayram-Hasretinle-Yandi-Gonlum', artistDisplay: 'Edip Akbayram', albumDisplay: 'Hasretinle Yandı Gönlüm' },
   ],
   ilahi: [
-    { identifier: 'Abdurrahmannl-ZahidSultan', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Gönülden Gönüle', maxFiles: 8 },
-    { identifier: 'ne-olur-gel-hele-abdurrahman-onul-ilahi', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Seçkin İlahiler' },
+    { identifier: 'Abdurrahmannl-ZahidSultan', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Gönülden Gönüle', maxFiles: 10 },
+    { identifier: 'ne-olur-gel-hele-abdurrahman-onul-ilahi', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Ne Olur Gel Hele' },
+    { identifier: 'medinenin-yollarina-abdurrahman-onul-ilahi', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Medine Yollarına' },
+    { identifier: 'tesbih-elimde-abdurrahman-onul-ilahi', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Tesbih Elimde' },
+    { identifier: 'hali-mi-z-nola-mahs-erde-abdurrahman-onul-duygusal-ilahiler', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Duygusal İlahiler' },
     { identifier: 'NefseUyup-M.eminAy', artistDisplay: 'Mehmet Emin Ay', albumDisplay: 'Türkçe İlahi Seçkisi' },
+    { identifier: 'kerkuk-ilahi-grubu-entel-habib', artistDisplay: 'Kerkük İlahi Grubu', albumDisplay: 'Ente’l Habib' },
+    { identifier: 'kerkuk-ilahi-grubu-selam-islam-bayragina', artistDisplay: 'Kerkük İlahi Grubu', albumDisplay: 'Selam İslam Bayrağına' },
+    { identifier: 'kerkuk-ilahi-grubu-ya-taybe', artistDisplay: 'Kerkük İlahi Grubu', albumDisplay: 'Ya Taybe' },
+    { identifier: 'mustafademircimuhammeds.a.v.senvebenofficialvideo', artistDisplay: 'Mustafa Demirci', albumDisplay: 'Sen ve Ben' },
   ],
   ezgi: [
+    { identifier: 'ErefZiyaVeArkadaalaraKalksamVeDirilsem1991', artistDisplay: 'Eşref Ziya Terzi', albumDisplay: 'Kalksam ve Dirilsem', year: '1991', maxFiles: 12 },
+    { identifier: 'esref-ziya-6-soyle-istanbul', artistDisplay: 'Eşref Ziya Terzi', albumDisplay: 'Söyle İstanbul', maxFiles: 10 },
+    { identifier: 'MustafaCihat-Amenna', artistDisplay: 'Mustafa Cihat', albumDisplay: 'Amenna', maxFiles: 10 },
     { identifier: 'MustafaCihat-HepsiOndadr', artistDisplay: 'Mustafa Cihat', albumDisplay: 'Özgün Türkçe Ezgiler' },
-    { identifier: 'SehidTahdndaOmerKaraoglu', artistDisplay: 'Ömer Karaoğlu', albumDisplay: 'Klasik Ezgiler' },
     { identifier: 'MustafaCihatGrddkKiEditByEnderHafazm', artistDisplay: 'Mustafa Cihat', albumDisplay: 'Akustik Ezgiler' },
+    { identifier: 'MustafaCihatHallerimizYeniEser2013', artistDisplay: 'Mustafa Cihat', albumDisplay: 'Hallerimiz', year: '2013' },
+    { identifier: 'SehidTahdndaOmerKaraoglu', artistDisplay: 'Ömer Karaoğlu', albumDisplay: 'Klasik Ezgiler' },
+    { identifier: 'OmerKaraogluSenGelDiyeEySevgili', artistDisplay: 'Ömer Karaoğlu', albumDisplay: 'Sen Gel Diye' },
+    { identifier: 'MerKaraooluUahitOlAkdeniz2012', artistDisplay: 'Ömer Karaoğlu', albumDisplay: 'Şahit Ol Akdeniz', year: '2012' },
+    { identifier: 'MerKaraooluTohum', artistDisplay: 'Ömer Karaoğlu', albumDisplay: 'Tohum' },
+    { identifier: 'ezgilergenc', artistDisplay: 'Grup Genç', albumDisplay: 'Seçme Ezgiler' },
   ],
   nesid: [
-    { identifier: 'y-2mate.com-maher-zain-rahmatun-lil-alameen-official-music-video', artistDisplay: 'Maher Zain', albumDisplay: 'Seçkin Neşidler' },
-    { identifier: 'emad--almansery--mp3--anasheed----37--nasheed---from-el-moslem.com', artistDisplay: 'Emad Al-Mansery', albumDisplay: 'Enstrümansız Vokal Neşid', maxFiles: 8 },
+    { identifier: 'Maher_Zain-Thank_You_Allah_2009', artistDisplay: 'Maher Zain', albumDisplay: 'Thank You Allah', year: '2009', maxFiles: 16 },
+    { identifier: 'y-2mate.com-maher-zain-rahmatun-lil-alameen-official-music-video', artistDisplay: 'Maher Zain', albumDisplay: 'Rahmatun Lil Alameen' },
+    { identifier: 'MaherZainAssubhuBadaOfficialMusicVideo', artistDisplay: 'Maher Zain', albumDisplay: 'Assubhu Bada' },
+    { identifier: 'MaherZainForgiveMe_201704', artistDisplay: 'Maher Zain', albumDisplay: 'Forgive Me' },
+    { identifier: 'MaherZainInshaAllahArabic', artistDisplay: 'Maher Zain', albumDisplay: 'Insha Allah (Arapça)' },
+    { identifier: 'Maher.Zain.Kun.Rahma', artistDisplay: 'Maher Zain', albumDisplay: 'Kun Rahma' },
+    { identifier: 'emad--almansery--mp3--anasheed----37--nasheed---from-el-moslem.com', artistDisplay: 'Emad Al-Mansery', albumDisplay: 'Enstrümansız Vokal Neşid', maxFiles: 10 },
   ],
   zikirli_ilahiler: [
-    { identifier: 'Abdurrahmannl-ZahidSultan', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Zikirli İlahiler', maxFiles: 8 },
+    { identifier: 'Abdurrahmannl-ZahidSultan', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Zikirli İlahiler', maxFiles: 10 },
+    { identifier: 'seni-nle-bi-r-o-mu-r-boyu-abdurrahman-onul-en-guzel-en-duygusal-ilahiler', artistDisplay: 'Abdurrahman Önül', albumDisplay: 'Seninle Bir Ömür Boyu' },
     { identifier: 'NefseUyup-M.eminAy', artistDisplay: 'Mehmet Emin Ay', albumDisplay: 'Manevi Zikir Seçkisi' },
+    { identifier: 'nazargah-ilahi-grubu-arzu-hal-icin', artistDisplay: 'Nazargah İlahi Grubu', albumDisplay: 'Arzu Hal İçin' },
+    { identifier: 'dost-el-ilahi-grubu-nefsim-sen-olmez-misin', artistDisplay: 'Dost El İlahi Grubu', albumDisplay: 'Nefsim Sen Ölmez Misin' },
+    { identifier: 'derman-ilahi-grubu-ya-ilahi', artistDisplay: 'Derman İlahi Grubu', albumDisplay: 'Ya İlahi' },
+    { identifier: 'divan-ilahi-grubu-mevla-ya-salli', artistDisplay: 'Divan İlahi Grubu', albumDisplay: 'Mevlaya Salli' },
+    { identifier: 'sariyer-uftade-ilahi-grubu-dunya-kimseye-kalmaz', artistDisplay: 'Üftade İlahi Grubu', albumDisplay: 'Dünya Kimseye Kalmaz' },
+    { identifier: 'kerkuk-ilahi-grubu-entel-habib', artistDisplay: 'Kerkük İlahi Grubu', albumDisplay: 'Ente’l Habib' },
+    { identifier: 'kerkuk-ilahi-grubu-ya-taybe', artistDisplay: 'Kerkük İlahi Grubu', albumDisplay: 'Ya Taybe' },
   ],
   tasavvuf: [
+    { identifier: '2s-062-53.232-hayri-tamer-ney-flute-en-turquie', artistDisplay: 'Hayri Tamer', albumDisplay: 'Ney Taksimleri & Türk Tasavvuf', maxFiles: 8 },
     { identifier: 'NeyTaksimiMystery', artistDisplay: 'Ney Taksimi Seçkisi', albumDisplay: 'Tasavvuf & Sükûnet' },
     { identifier: 'Tasavvuf2', artistDisplay: 'Tasavvuf Topluluğu', albumDisplay: 'Mevlevi & Ney Arşivi' },
+    { identifier: 'ibrahim-sufi-ya-hadi', artistDisplay: 'İbrahim Sufi', albumDisplay: 'Ya Hadi (Tasavvuf)' },
+    { identifier: 'ibrahim-sufi-gul-yuzunu', artistDisplay: 'İbrahim Sufi', albumDisplay: 'Gül Yüzünü' },
+    { identifier: 'ibrahim-sufi-ya-seyyidi', artistDisplay: 'İbrahim Sufi', albumDisplay: 'Ya Seyyidi' },
+    { identifier: 'Ilahi-EyAllahim', artistDisplay: 'Tasavvuf İlâhî Seçkisi', albumDisplay: 'Ey Allahım' },
+    { identifier: 'ney-flute', artistDisplay: 'Klasik Ney', albumDisplay: 'Ney Dinletisi' },
+    { identifier: 'jamendo-217601', artistDisplay: 'Ney & Bendir Akustik', albumDisplay: 'Huzur Seçkisi' },
   ],
 };
 
@@ -385,11 +486,18 @@ export function cleanTrackTitle(raw: string, fallback: string): string {
   return cleaned.length >= 2 ? cleaned : fallback;
 }
 
-function getFormatPriority(filename: string): number {
+function getAudioQualityScore(filename: string, rawBitrate?: string): number {
   const lower = filename.toLowerCase();
-  if (lower.endsWith('.mp3')) return 3;
-  if (lower.endsWith('.flac')) return 2;
-  if (lower.endsWith('.ogg')) return 1;
+  const br = rawBitrate ? Math.round(Number.parseFloat(rawBitrate)) : 0;
+  if (lower.endsWith('.mp3')) {
+    if (br >= 256) return 100;
+    if (br >= 192) return 90;
+    if (br >= 128) return 75;
+    if (br === 0) return 80; // VBR/unspecified standard MP3
+    return 40;
+  }
+  if (lower.endsWith('.flac')) return 85;
+  if (lower.endsWith('.ogg')) return 60;
   return 0;
 }
 
@@ -744,27 +852,31 @@ class AutoMusicDatabase {
         }>;
       };
 
-      const rawAudioFiles = (json.result ?? []).filter(
-        (f) =>
-          f.name &&
-          /\.(mp3|ogg|flac)$/i.test(f.name) &&
-          !f.name.includes('_64kb') &&
-          !f.name.startsWith('__') &&
-          !/(sample|preview|spectrogram|_meta)/i.test(f.name)
-      );
+      const rawAudioFiles = (json.result ?? []).filter((f) => {
+        if (!f.name || !/\.(mp3|ogg|flac)$/i.test(f.name)) return false;
+        if (/_(64|32|48)kb/i.test(f.name) || f.name.startsWith('__')) return false;
+        if (/(sample|preview|spectrogram|_meta)/i.test(f.name)) return false;
+        const br = f.bitrate ? Number.parseFloat(f.bitrate) : 0;
+        if (Number.isFinite(br) && br > 0 && br < 96) return false;
+        return true;
+      });
 
-      // Deduplicate same track stored in multiple formats (.mp3 + .ogg + .flac), preferring MP3 for universal fast streaming
+      // Deduplicate same track stored in multiple formats, prioritizing >=192kbps MP3 & FLAC over low-bitrate encodes
       const bestByStem = new Map<string, (typeof rawAudioFiles)[number]>();
       for (const file of rawAudioFiles) {
         if (!file.name) continue;
         const stem = file.name.replace(/\.(mp3|ogg|flac)$/i, '').toLowerCase();
         const existing = bestByStem.get(stem);
-        if (!existing || getFormatPriority(file.name) > getFormatPriority(existing.name ?? '')) {
+        if (
+          !existing ||
+          getAudioQualityScore(file.name, file.bitrate) >
+            getAudioQualityScore(existing.name ?? '', existing.bitrate)
+        ) {
           bestByStem.set(stem, file);
         }
       }
 
-      const limit = source.maxFiles ?? 6;
+      const limit = source.maxFiles ?? 12;
       const files = Array.from(bestByStem.values()).slice(0, limit);
       const coverUrl = `https://archive.org/services/img/${encodeURIComponent(source.identifier)}`;
 
@@ -856,13 +968,58 @@ class AutoMusicDatabase {
       const fetched: MediaItem[] = [];
 
       if (curatedSources.length > 0) {
-        const settled = await Promise.allSettled(
-          curatedSources.map((src) => this.fetchArchiveMetadataTracks(src, category))
-        );
-        for (const r of settled) {
-          if (r.status === 'fulfilled') {
-            fetched.push(...r.value);
+        // Fetch in small batches to stay gentle on Archive.org metadata API
+        for (let i = 0; i < curatedSources.length; i += 5) {
+          const batch = curatedSources.slice(i, i + 5);
+          const settled = await Promise.allSettled(
+            batch.map((src) => this.fetchArchiveMetadataTracks(src, category))
+          );
+          for (const r of settled) {
+            if (r.status === 'fulfilled') {
+              fetched.push(...r.value);
+            }
           }
+        }
+      }
+
+      // Dynamic Archive discovery fallback for custom categories or any category under 10 tracks
+      if (fetched.length < 10 && category.archiveQuery) {
+        try {
+          const safeQ = category.archiveQuery.replace(/["\\():]/g, ' ').trim();
+          const searchUrl = new URL('https://archive.org/advancedsearch.php');
+          searchUrl.searchParams.set(
+            'q',
+            `(title:(${safeQ}) OR creator:(${safeQ})) AND mediatype:(audio) AND format:(VBR MP3 OR MP3) AND NOT access-restricted-item:true`
+          );
+          searchUrl.searchParams.append('fl[]', 'identifier');
+          searchUrl.searchParams.append('fl[]', 'title');
+          searchUrl.searchParams.append('fl[]', 'creator');
+          searchUrl.searchParams.set('rows', '8');
+          searchUrl.searchParams.set('output', 'json');
+          const res = await fetch(searchUrl.toString(), {
+            headers: { Accept: 'application/json', 'User-Agent': 'AutoMusicPro4/1.0' },
+            signal: AbortSignal.timeout(7000),
+          });
+          if (res.ok) {
+            const json = (await res.json()) as {
+              response?: { docs?: Array<{ identifier: string; title?: string | string[]; creator?: string | string[] }> };
+            };
+            const docs = (json.response?.docs ?? []).slice(0, 6);
+            const dynSources: VerifiedArchiveSource[] = docs.map((d) => ({
+              identifier: d.identifier,
+              artistDisplay: Array.isArray(d.creator) ? d.creator[0] || category.name : d.creator || category.name,
+              albumDisplay: Array.isArray(d.title) ? d.title[0] || category.name : d.title || category.name,
+              maxFiles: 5,
+            }));
+            const settledDyn = await Promise.allSettled(
+              dynSources.map((src) => this.fetchArchiveMetadataTracks(src, category))
+            );
+            for (const r of settledDyn) {
+              if (r.status === 'fulfilled') fetched.push(...r.value);
+            }
+          }
+        } catch {
+          // Non-fatal fallback
         }
       }
 

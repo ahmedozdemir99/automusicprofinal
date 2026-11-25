@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
+  Download,
   Heart,
   Layers,
   ListMusic,
@@ -38,6 +39,9 @@ export const CategoriesScreen: React.FC = () => {
     addCategory,
     navigate,
     loadCategoryTracks,
+    discoverMoreCategoryTracks,
+    downloadCategoryTracks,
+    isOfflineDownloaded,
     catalogTracksByCategory,
     loadingCategories,
     playQueue,
@@ -52,6 +56,8 @@ export const CategoriesScreen: React.FC = () => {
   const [newSubtitle, setNewSubtitle] = useState('');
   const [newLanguage, setNewLanguage] = useState('Türkçe');
   const [buildingCombined, setBuildingCombined] = useState(false);
+  const [discoveringCatId, setDiscoveringCatId] = useState<string | null>(null);
+  const [downloadingCatId, setDownloadingCatId] = useState<string | null>(null);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -302,55 +308,107 @@ export const CategoriesScreen: React.FC = () => {
               </div>
 
               {/* Accordion Inline Drawer */}
-              {isExpanded && !multiSelectMode && (
-                <div className="px-4 pb-4 pt-2 border-t border-white/[0.06] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#D4AF37] font-medium">
-                      {cat.name} {cat.isQuran ? 'Örnek Sureler' : 'Kayıtları'} ({catTracks.length})
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={catTracks.length === 0}
-                        onClick={() => void playQueue(catTracks, false)}
-                        className="h-7 px-2.5 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] disabled:opacity-40 text-[#09090B] text-xs font-semibold flex items-center gap-1"
-                      >
-                        <Play className="w-3 h-3 fill-current" />
-                        Sıralı
-                      </button>
-                      <button
-                        type="button"
-                        disabled={catTracks.length === 0}
-                        onClick={() => void playQueue(catTracks, true)}
-                        className="h-7 px-2.5 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-40 text-[#F5F2EB] text-xs font-medium flex items-center gap-1"
-                      >
-                        <Shuffle className="w-3 h-3 text-[#D4AF37]" />
-                        Karışık
-                      </button>
-                    </div>
-                  </div>
+              {isExpanded && !multiSelectMode && (() => {
+                const downloadableRemaining = catTracks.filter(
+                  (t) => t.downloadAllowed && !t.isLocalFile && !isOfflineDownloaded(t.contentId)
+                ).length;
+                const isDiscovering = discoveringCatId === cat.id;
+                const isDownloadingCat = downloadingCatId === cat.id;
 
-                  {isLoading ? (
-                    <div className="p-4 flex items-center justify-center gap-2 text-xs text-[#9B978E]">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#D4AF37]" />
-                      Parçalar yükleniyor...
+                return (
+                  <div className="px-4 pb-4 pt-2 border-t border-white/[0.06] space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-[#D4AF37] font-medium">
+                        {cat.name} {cat.isQuran ? 'Örnek Sureler' : 'Kayıtları'} ({catTracks.length})
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={catTracks.length === 0}
+                          onClick={() => void playQueue(catTracks, false)}
+                          className="h-7 px-2.5 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] disabled:opacity-40 text-[#09090B] text-xs font-semibold flex items-center gap-1"
+                        >
+                          <Play className="w-3 h-3 fill-current" />
+                          Sıralı
+                        </button>
+                        <button
+                          type="button"
+                          disabled={catTracks.length === 0}
+                          onClick={() => void playQueue(catTracks, true)}
+                          className="h-7 px-2.5 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-40 text-[#F5F2EB] text-xs font-medium flex items-center gap-1"
+                        >
+                          <Shuffle className="w-3 h-3 text-[#D4AF37]" />
+                          Karışık
+                        </button>
+                        <button
+                          type="button"
+                          disabled={catTracks.length === 0 || isDownloadingCat || downloadableRemaining === 0}
+                          onClick={async () => {
+                            setDownloadingCatId(cat.id);
+                            try {
+                              await downloadCategoryTracks(cat.id);
+                            } finally {
+                              setDownloadingCatId(null);
+                            }
+                          }}
+                          title="Kategorideki tüm indirilebilir parçaları çevrimdışı arşive kaydet"
+                          className="h-7 px-2.5 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-40 text-[#F5F2EB] text-xs font-medium flex items-center gap-1"
+                        >
+                          {isDownloadingCat ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-[#D4AF37]" />
+                          ) : (
+                            <Download className="w-3 h-3 text-[#D4AF37]" />
+                          )}
+                          {downloadableRemaining > 0 ? `İndir (${downloadableRemaining})` : 'İndirildi'}
+                        </button>
+                      </div>
                     </div>
-                  ) : catTracks.length === 0 ? (
-                    <p className="p-3 text-center text-xs text-[#8C887F]">Bu kategori için kayıt bulunamadı.</p>
-                  ) : (
-                    <div className="max-h-72 overflow-y-auto bg-[#0C0C0F] rounded-xl p-1 divide-y divide-white/[0.04]">
-                      {catTracks.slice(0, 16).map((item, idx) => (
-                        <TrackRow
-                          key={item.contentId}
-                          item={item}
-                          index={idx}
-                          queueContext={catTracks}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+
+                    {isLoading ? (
+                      <div className="p-4 flex items-center justify-center gap-2 text-xs text-[#9B978E]">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#D4AF37]" />
+                        Parçalar yükleniyor...
+                      </div>
+                    ) : catTracks.length === 0 ? (
+                      <p className="p-3 text-center text-xs text-[#8C887F]">Bu kategori için kayıt bulunamadı.</p>
+                    ) : (
+                      <div className="max-h-72 overflow-y-auto bg-[#0C0C0F] rounded-xl p-1 divide-y divide-white/[0.04]">
+                        {catTracks.map((item, idx) => (
+                          <TrackRow
+                            key={item.contentId}
+                            item={item}
+                            index={idx}
+                            queueContext={catTracks}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {!cat.isQuran && (
+                      <button
+                        type="button"
+                        disabled={isDiscovering}
+                        onClick={async () => {
+                          setDiscoveringCatId(cat.id);
+                          try {
+                            await discoverMoreCategoryTracks(cat.id);
+                          } finally {
+                            setDiscoveringCatId(null);
+                          }
+                        }}
+                        className="w-full h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-[11px] font-medium text-[#D4AF37] flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        {isDiscovering ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Plus className="w-3 h-3" />
+                        )}
+                        Çevrimiçi Katalogdan Daha Fazla Parça Bul
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -1099,6 +1157,9 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
     catalogNotices,
     loadingCategories,
     loadCategoryTracks,
+    discoverMoreCategoryTracks,
+    downloadCategoryTracks,
+    isOfflineDownloaded,
     importLocalAudioFiles,
     playQueue,
     goBack,
@@ -1110,6 +1171,8 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
   const [formatFilter, setFormatFilter] = useState('all');
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(25);
+  const [discoveringMore, setDiscoveringMore] = useState(false);
+  const [downloadingCategory, setDownloadingCategory] = useState(false);
 
   const category = categories.find((c) => c.id === categoryId);
   const allTracks = categoryId ? catalogTracksByCategory[categoryId] ?? [] : [];
@@ -1151,6 +1214,15 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
       );
     });
   }, [artistFilter, filterText, formatFilter, sourceTracks]);
+
+  const downloadableTracks = useMemo(
+    () => filteredTracks.filter((t) => t.downloadAllowed && !t.isLocalFile && Boolean(t.streamUrl)),
+    [filteredTracks]
+  );
+  const remainingDownloadCount = useMemo(
+    () => downloadableTracks.filter((t) => !isOfflineDownloaded(t.contentId)).length,
+    [downloadableTracks, isOfflineDownloaded]
+  );
 
   return (
     <div className="space-y-6 pb-10">
@@ -1227,6 +1299,31 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
               <Upload className="w-4 h-4 text-[#D4AF37] shrink-0" />
               Telefondan Ses Yükle
             </button>
+
+            {categoryId && downloadableTracks.length > 0 && (
+              <button
+                type="button"
+                disabled={downloadingCategory || remainingDownloadCount === 0}
+                onClick={async () => {
+                  setDownloadingCategory(true);
+                  try {
+                    await downloadCategoryTracks(categoryId);
+                  } finally {
+                    setDownloadingCategory(false);
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-white/[0.06] hover:bg-white/[0.11] disabled:opacity-50 border border-[#D4AF37]/30 text-sm font-medium text-[#F5F2EB] transition-colors whitespace-nowrap"
+              >
+                {downloadingCategory ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#D4AF37] shrink-0" />
+                ) : (
+                  <Download className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                )}
+                {remainingDownloadCount > 0
+                  ? `Kategoriyi İndir (${remainingDownloadCount})`
+                  : 'Tümü Çevrimdışı İndirildi'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1374,8 +1471,8 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
               <TrackRow key={item.contentId} item={item} index={idx} queueContext={filteredTracks} />
             ))}
           </div>
-          {filteredTracks.length > visibleCount && (
-            <div className="flex justify-center">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {filteredTracks.length > visibleCount && (
               <button
                 type="button"
                 onClick={() => setVisibleCount((prev) => prev + 25)}
@@ -1383,8 +1480,31 @@ export const TrackListScreen: React.FC<{ categoryId?: string; title: string }> =
               >
                 Daha Fazla Göster ({filteredTracks.length - visibleCount} kayıt kaldı)
               </button>
-            </div>
-          )}
+            )}
+            {categoryId && categoryId !== 'kuran' && (
+              <button
+                type="button"
+                disabled={discoveringMore}
+                onClick={async () => {
+                  setDiscoveringMore(true);
+                  try {
+                    const added = await discoverMoreCategoryTracks(categoryId);
+                    if (added > 0) setVisibleCount((prev) => prev + added);
+                  } finally {
+                    setDiscoveringMore(false);
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#141418] hover:bg-[#1C1C22] disabled:opacity-50 border border-white/15 text-xs font-medium text-[#F5F2EB] transition-colors"
+              >
+                {discoveringMore ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#D4AF37]" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5 text-[#D4AF37]" />
+                )}
+                Çevrimiçi Katalogdan Daha Fazla Parça Keşfet
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

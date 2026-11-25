@@ -157,6 +157,7 @@ interface AutoMusicContextValue {
   catalogNotices: Record<string, string | undefined>;
   loadingCategories: Record<string, boolean>;
   loadCategoryTracks: (categoryId: string, forceRefresh?: boolean) => Promise<MediaItem[]>;
+  discoverMoreCategoryTracks: (categoryId: string) => Promise<number>;
   importLocalAudioFiles: (files: FileList, categoryId: string, artistName?: string) => Promise<number>;
 
   // Quran
@@ -240,6 +241,7 @@ interface AutoMusicContextValue {
   clearAllDownloads: () => Promise<void>;
   refreshStorageStats: () => Promise<void>;
   completeMissingDownloads: () => Promise<void>;
+  downloadCategoryTracks: (categoryId: string) => Promise<void>;
 
   // Equalizer (10-Band DSP + Custom Profiles)
   eqSettings: EqualizerSettings;
@@ -381,6 +383,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
   const playRequestSeqRef = useRef<number>(0);
   // Circuit breaker: remembers dead URLs for 10 minutes so we don't retry broken links endlessly
   const failedUrlsRef = useRef<Map<string, number>>(new Map());
+  const categoryDiscoveryOffsetsRef = useRef<Record<string, number>>({});
   const sleepTimerModeRef = useRef<SleepTimerMode>('off');
   const volumeRef = useRef<number>(0.9);
 
@@ -602,6 +605,56 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [categories, downloads, selectedReciterId]
+  );
+
+  // Live online discovery for additional category tracks from open archives
+  const discoverMoreCategoryTracks = useCallback(
+    async (categoryId: string): Promise<number> => {
+      const category = categories.find((c) => c.id === categoryId);
+      if (!category || category.isQuran) return 0;
+
+      const currentOffset = categoryDiscoveryOffsetsRef.current[categoryId] ?? 0;
+      const { tracks: discovered, notice } = await openMusicRepository.discoverMoreCategoryTracks(
+        category,
+        currentOffset
+      );
+      categoryDiscoveryOffsetsRef.current[categoryId] = currentOffset + 8;
+
+      if (discovered.length === 0) {
+        showToast(notice || 'Bu kategori için şu anda yeni açık arşiv kaydı bulunamadı.');
+        return 0;
+      }
+
+      let addedCount = 0;
+      setCatalogTracksByCategory((prev) => {
+        const existing = prev[categoryId] ?? [];
+        const seenIds = new Set(existing.map((t) => t.contentId));
+        const seenKeys = new Set(
+          existing.map(
+            (t) => `${t.artistName.toLocaleLowerCase('tr-TR')}::${t.title.toLocaleLowerCase('tr-TR')}`
+          )
+        );
+        const fresh: MediaItem[] = [];
+        for (const t of discovered) {
+          const key = `${t.artistName.toLocaleLowerCase('tr-TR')}::${t.title.toLocaleLowerCase('tr-TR')}`;
+          if (!t.contentId || seenIds.has(t.contentId) || seenKeys.has(key)) continue;
+          seenIds.add(t.contentId);
+          seenKeys.add(key);
+          fresh.push(t);
+        }
+        addedCount = fresh.length;
+        if (addedCount === 0) return prev;
+        return { ...prev, [categoryId]: [...existing, ...fresh] };
+      });
+
+      if (addedCount > 0) {
+        showToast(`${category.name} kategorisine ${addedCount} yeni parça eklendi.`);
+      } else {
+        showToast('Yeni sayfada eklenmemiş parça bulunamadı. Tekrar deneyerek sonraki sayfaya geçebilirsiniz.');
+      }
+      return addedCount;
+    },
+    [categories, showToast]
   );
 
   // Import real user audio files (MP3/AAC/FLAC/WAV/OGG) from phone/device into IndexedDB archive
@@ -859,6 +912,88 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     }
     showToast(`Eksik dosyaları tamamlama tamamlandı. ${count} yeni kayıt arşive eklendi.`);
   }, [favoriteTracks, playlists, recentlyPlayed, isOfflineDownloaded, triggerDownload, showToast]);
+
+  // Batch download all downloadable tracks in a category (with concurrency 2 + storage/Wi-Fi safety)
+  const downloadCategoryTracks = useCallback(
+    async (categoryId: string) => {
+      const category = categories.find((c) => c.id === categoryId);
+      let pool: MediaItem[] = [];
+      if (category?.isQuran) {
+        pool = quranRepository.getSurahTracksForReciter(selectedReciterId);
+      } else {
+        pool = catalogTracksByCategory[categoryId] ?? [];
+        if (pool.length === 0) {
+          pool = await loadCategoryTracks(categoryId, false);
+        }
+      }
+
+      const downloadable = pool.filter(
+        (item) =>
+          item.downloadAllowed &&
+          !item.isLocalFile &&
+          Boolean(item.streamUrl) &&
+          !isOfflineDownloaded(item.contentId) &&
+          !activeDownloadIdsRef.current.has(item.contentId)
+      );
+
+      if (downloadable.length === 0) {
+        showToast('Bu kategorideki indirilebilir tüm parçalar zaten çevrimdışı arşivinizde.');
+        return;
+      }
+
+      const navConn = (navigator as unknown as { connection?: { type?: string } }).connection;
+      if (downloadSettings.wifiOnly && navConn?.type === 'cellular') {
+        showToast('Yalnızca Wi-Fi ayarı açık. İndirme Wi-Fi bağlantısı bekliyor.');
+        return;
+      }
+
+      const est = await getStorageEstimate(downloads, downloadSettings.minFreeSpaceGb);
+      setStorageEstimate(est);
+      if (est.isBelowTwoGbThreshold) {
+        showToast(`Boş depolama alanı ${downloadSettings.minFreeSpaceGb} GB altında. İndirme durduruldu.`);
+        return;
+      }
+
+      const catTitle = category?.name ?? 'Kategori';
+      showToast(`${catTitle}: ${downloadable.length} parça çevrimdışı arşive indiriliyor...`);
+
+      let nextIndex = 0;
+      let completedCount = 0;
+      const concurrency = 2;
+
+      const worker = async () => {
+        while (nextIndex < downloadable.length) {
+          const idx = nextIndex++;
+          const item = downloadable[idx];
+          try {
+            await triggerDownload(item, false);
+            if (await hasOfflineAudio(item.contentId)) {
+              completedCount++;
+            }
+          } catch {
+            // Continue with next track
+          }
+        }
+      };
+
+      await Promise.all(Array.from({ length: Math.min(concurrency, downloadable.length) }, () => worker()));
+      await refreshStorageStats();
+      showToast(`${catTitle}: ${completedCount}/${downloadable.length} parça çevrimdışı arşive kaydedildi.`);
+    },
+    [
+      categories,
+      catalogTracksByCategory,
+      downloadSettings.minFreeSpaceGb,
+      downloadSettings.wifiOnly,
+      downloads,
+      isOfflineDownloaded,
+      loadCategoryTracks,
+      refreshStorageStats,
+      selectedReciterId,
+      showToast,
+      triggerDownload,
+    ]
+  );
 
   const updateDownloadSettings = useCallback((patch: Partial<DownloadSettings>) => {
     setDownloadSettings((prev) => {
@@ -1777,6 +1912,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     catalogNotices,
     loadingCategories,
     loadCategoryTracks,
+    discoverMoreCategoryTracks,
     importLocalAudioFiles,
     selectedReciterId,
     setSelectedReciterId,
@@ -1842,6 +1978,7 @@ export function AutoMusicProvider({ children }: { children: React.ReactNode }) {
     clearAllDownloads,
     refreshStorageStats,
     completeMissingDownloads,
+    downloadCategoryTracks,
     eqSettings,
     isEqSupported: sharedAudioEngine.isDspSupported,
     updateEqSettings,
