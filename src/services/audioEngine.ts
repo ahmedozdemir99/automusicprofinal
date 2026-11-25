@@ -169,6 +169,7 @@ export class AutoMusicAudioEngine {
   private compressor: DynamicsCompressorNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
+  private frequencyData: Uint8Array<ArrayBuffer> | null = null;
   private dspSupported: boolean;
   private dspConnected = false;
   private lastAppliedSettings: EqualizerSettings | null = null;
@@ -437,7 +438,10 @@ export class AutoMusicAudioEngine {
     if (!this.analyser || !this.dspConnected || this.ctx?.state !== 'running') {
       return new Array(barCount).fill(0);
     }
-    const data = new Uint8Array(this.analyser.frequencyBinCount);
+    if (!this.frequencyData || this.frequencyData.length !== this.analyser.frequencyBinCount) {
+      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+    }
+    const data = this.frequencyData;
     this.analyser.getByteFrequencyData(data);
     const usableBins = Math.min(data.length, 48);
     const levels: number[] = [];
@@ -454,6 +458,7 @@ export class AutoMusicAudioEngine {
   }
 
   setVolume(volume01: number): void {
+    if (!Number.isFinite(volume01)) return;
     this.baseVolume = Math.max(0, Math.min(1, volume01));
     if (this.fadeFrameId !== null) {
       cancelAnimationFrame(this.fadeFrameId);
@@ -617,7 +622,7 @@ export class AutoMusicAudioEngine {
    * preventing audio hardware crackle and stutter, then smoothly resumes playback.
    */
   handlePlaybackStall(targetBufferSeconds = 2.5): void {
-    if (this.rebuffering) return;
+    if (this.rebuffering || this.audioEl.paused || this.audioEl.ended || this.audioEl.seeking) return;
     if (!this.audioEl.src || this.audioEl.src.startsWith('blob:')) return;
 
     this.rebuffering = true;
