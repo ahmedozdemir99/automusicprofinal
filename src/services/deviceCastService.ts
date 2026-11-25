@@ -393,15 +393,14 @@ export class TvCastControllerClient {
         this.callbacks.onError('TV bağlantı sunucusuna erişilemedi.');
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (this.pingTimer) {
           window.clearInterval(this.pingTimer);
           this.pingTimer = null;
         }
         if (!this.closedManually) {
-          this.reconnectTimer = window.setTimeout(() => this.connect(), 3000);
-        } else {
-          this.callbacks.onClose();
+          this.callbacks.onPresence(0);
+          if (event.code !== 1008) this.reconnectTimer = window.setTimeout(() => this.connect(), 3000);
         }
       };
     } catch {
@@ -475,6 +474,8 @@ export class TvCastReceiverClient {
             );
           } else if (msg.type === 'cast:paired' || msg.type === 'cast:presence') {
             this.callbacks.onPresence(Number(msg.controllerCount) || 0);
+          } else if (msg.type === 'cast:error') {
+            this.callbacks.onStatusError(String(msg.message || 'TV alıcısı bağlanamadı.'));
           } else if (msg.type === 'cast:state' && msg.state) {
             this.callbacks.onState(msg.state as TvCastPlaybackState);
           }
@@ -493,6 +494,8 @@ export class TvCastReceiverClient {
           this.pingTimer = null;
         }
         if (!this.closedManually) {
+          this.callbacks.onPresence(0);
+          this.callbacks.onStatusError('TV bağlantısı yeniden kuruluyor...');
           this.reconnectTimer = window.setTimeout(() => this.connect(), 2500);
         }
       };
