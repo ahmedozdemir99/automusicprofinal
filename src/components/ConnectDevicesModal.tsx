@@ -110,14 +110,14 @@ export const ConnectDevicesModal: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-label="Cihaza Bağlan ve Paylaş"
-      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeConnectModal();
       }}
     >
-      <div className="w-full max-w-xl bg-[#121216] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-xl bg-[#121216] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[90dvh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between gap-3 shrink-0">
+        <div className="px-3 sm:px-6 py-2 sm:py-4 border-b border-white/[0.08] flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
               {connectModalTab === 'tv' ? (
@@ -146,7 +146,7 @@ export const ConnectDevicesModal: React.FC = () => {
         </div>
 
         {/* Mode Tabs */}
-        <div className="px-6 pt-4 grid grid-cols-2 gap-2 shrink-0">
+        <div className="px-3 sm:px-6 pt-2 grid grid-cols-2 gap-2 shrink-0">
           <button
             type="button"
             onClick={() => openConnectModal('tv')}
@@ -180,13 +180,13 @@ export const ConnectDevicesModal: React.FC = () => {
         </div>
 
         {/* Body */}
-        <div className="p-3 sm:p-4 overflow-y-auto space-y-2">
+        <div className="p-3 sm:p-4 min-h-0 overflow-y-auto overflow-x-hidden space-y-2">
           {connectModalTab === 'tv' ? (
             <>
               {/* Active TV Connection Card */}
               {tvCastConnected && tvCastCode ? (
                 <div className="p-3 rounded-xl bg-emerald-500/12 border border-emerald-500/35 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <MonitorPlay className="w-5 h-5 text-emerald-400 shrink-0" />
                       <div>
@@ -248,7 +248,7 @@ export const ConnectDevicesModal: React.FC = () => {
                       onChange={(e) => handleCodeChange(e.target.value)}
                       placeholder="Örn: 482-915"
                       aria-label="6 haneli Google TV kodu"
-                      className="flex-1 h-12 px-4 rounded-xl bg-[#0D0D11] border border-white/15 focus:border-[#D4AF37] outline-none text-center text-lg font-mono font-bold tracking-[0.25em] text-[#F5F2EB]"
+                      className="w-full min-w-0 flex-1 h-12 px-4 rounded-xl bg-[#0D0D11] border border-white/15 focus:border-[#D4AF37] outline-none text-center text-lg font-mono font-bold tracking-[0.25em] text-[#F5F2EB]"
                     />
                     <button
                       type="submit"
@@ -282,7 +282,7 @@ export const ConnectDevicesModal: React.FC = () => {
 
               {/* TV Receiver Link & Launch Box */}
               <div className="p-3 rounded-xl bg-[#16161C] border border-white/[0.07] space-y-2">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold text-[#E5C158]">
                     TV alıcı adresi
                   </p>
@@ -297,13 +297,13 @@ export const ConnectDevicesModal: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <code className="flex-1 min-w-[180px] px-3 py-2 rounded-xl bg-[#0D0D11] border border-white/10 text-xs font-mono text-[#E5E2D9] truncate">
+                  <code className="basis-full min-w-0 px-3 py-2 rounded-xl bg-[#0D0D11] border border-white/10 text-xs font-mono text-[#E5E2D9] truncate">
                     {tvReceiverUrl}
                   </code>
                   <button
                     type="button"
                     onClick={() => void handleCopyTvUrl()}
-                    className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-[#F5F2EB] inline-flex items-center gap-1.5 shrink-0"
+                    className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-[#F5F2EB] inline-flex items-center gap-1.5 shrink-0"
                   >
                     {copiedLink ? (
                       <>
@@ -320,7 +320,7 @@ export const ConnectDevicesModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => void handleShareTvUrl()}
-                    className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-[#F5F2EB] inline-flex items-center gap-1.5 shrink-0"
+                    className="flex-1 min-w-0 h-11 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-[#F5F2EB] inline-flex items-center gap-1.5 shrink-0"
                   >
                     <Share2 className="w-3.5 h-3.5 text-[#D4AF37]" />
                     Paylaş
@@ -412,7 +412,7 @@ export const ConnectDevicesModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => void connectBluetoothCar()}
-                    className="flex-1 min-w-[200px] h-11 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors"
+                    className="w-full min-w-0 sm:flex-1 h-11 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-[#09090B] text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors"
                   >
                     <Bluetooth className="w-4 h-4 shrink-0" />
                     {isBluetoothBleSupported
