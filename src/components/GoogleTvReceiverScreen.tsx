@@ -229,7 +229,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
     effectiveDuration > 0 ? Math.min(100, (audioCurrentTime / effectiveDuration) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#070709] text-[#F5F2EB] flex flex-col justify-between overflow-hidden select-none">
+    <div className="fixed inset-0 z-50 bg-[#070709] text-[#F5F2EB] flex flex-col justify-between overflow-y-auto overflow-x-hidden select-none">
       <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
 
       {/* Subtle Ambient Backdrop */}
@@ -246,7 +246,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       />
 
       {/* Top TV Header */}
-      <header className="relative z-10 px-6 sm:px-10 py-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08]">
+      <header className="relative z-10 px-3 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center">
             <Tv className="w-6 h-6 text-[#D4AF37]" />
@@ -308,7 +308,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
               </p>
             </div>
 
-            <div className="inline-flex flex-col items-center gap-3 px-10 py-7 rounded-3xl bg-[#121217]/95 border border-[#D4AF37]/40 shadow-2xl">
+            <div className="inline-flex flex-col items-center gap-3 px-5 sm:px-10 py-4 rounded-3xl bg-[#121217]/95 border border-[#D4AF37]/40 shadow-2xl">
               <span className="font-mono text-5xl sm:text-7xl font-extrabold tracking-[0.22em] text-[#E5C158]">
                 {tvCode ? formatTvCode(tvCode) : '------'}
               </span>
@@ -339,7 +339,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 sm:gap-12 items-center">
+          <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-8 items-center">
             <div className="md:col-span-5 flex justify-center">
               <ArtworkCover
                 motif={track.motif}
@@ -458,7 +458,7 @@ export const GoogleTvReceiverScreen: React.FC = () => {
       </main>
 
       {/* Bottom Hint Bar */}
-      <footer className="relative z-10 px-6 sm:px-10 py-4 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs text-[#8C887F]">
+      <footer className="relative z-10 px-3 sm:px-8 py-2 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs text-[#8C887F]">
         <span>Kumanda Tuşları: Oynat/Duraklat (Space / OK) · Önceki/Sonraki (Sol/Sağ Ok)</span>
         <span>AutoMusic Pro 4 TV Receiver</span>
       </footer>
