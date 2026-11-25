@@ -205,7 +205,7 @@ export const ConnectDevicesModal: React.FC = () => {
                       onClick={disconnectTvCast}
                       className="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-red-500/20 border border-white/10 text-xs font-semibold text-[#F5F2EB] transition-colors"
                     >
-                      Ayır
+                      Yayını Durdur
                     </button>
                   </div>
 
