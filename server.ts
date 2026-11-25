@@ -1028,7 +1028,7 @@ async function startServer(): Promise<void> {
 
   const allocateTvCode = (preferred?: string): string => {
     const cleanPref = normalizeTvCode(preferred);
-    if (cleanPref.length === 6) return cleanPref;
+    if (cleanPref.length === 6 && !tvRooms.has(cleanPref)) return cleanPref;
     for (let i = 0; i < 20; i++) {
       const candidate = String(randomInt(100000, 1000000));
       if (!tvRooms.has(candidate)) return candidate;
@@ -1248,6 +1248,7 @@ export class ErrorOverlay extends HTMLElement {}
           unknown
         > | null;
         if (!nextState || Array.isArray(nextState)) return;
+        if (typeof nextState.isPlaying !== 'boolean' || typeof nextState.positionSec !== 'number' || !Number.isFinite(nextState.positionSec) || nextState.positionSec < 0) return;
         room.state = nextState;
         room.lastUpdated = Date.now();
         room.receivers.forEach((r) => sendWs(r, { type: 'cast:state', state: nextState }));
