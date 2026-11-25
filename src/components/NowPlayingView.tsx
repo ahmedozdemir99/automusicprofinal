@@ -11,6 +11,7 @@ import {
   Heart,
   Loader2,
   Moon,
+  MoreVertical,
   Trash2,
   Pause,
   Play,
@@ -87,6 +88,8 @@ export const NowPlayingView: React.FC = () => {
     btConnected,
   } = useAutoMusic();
 
+  const [showTrackMenu, setShowTrackMenu] = useState(false);
+  useEffect(() => { setShowTrackMenu(false); }, [currentTrack?.contentId]);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -294,7 +297,7 @@ export const NowPlayingView: React.FC = () => {
                   {nonStudioLabel}
                 </span>
               )}
-              {currentTrack.categoryId !== 'kuran' && <button type="button" aria-label="Müziği kaldır" title="Müziği kaldır" onClick={() => { if (window.confirm('Bu müzik kütüphanenden kaldırılsın mı?')) hideMusic(currentTrack); }} className="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg text-[#D4AF37] hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-[#D4AF37]"><Trash2 className="w-4 h-4"/></button>}
+              {currentTrack.categoryId !== 'kuran' && <div className="relative shrink-0"><button type="button" aria-label="Müzik seçenekleri" aria-expanded={showTrackMenu} onClick={() => setShowTrackMenu(v => !v)} className="w-10 h-10 flex items-center justify-center rounded-lg text-[#D4AF37] hover:bg-white/[0.08]"><MoreVertical className="w-4 h-4"/></button>{showTrackMenu && <><button type="button" aria-label="Menüyü kapat" className="fixed inset-0 z-30 cursor-default" onClick={() => setShowTrackMenu(false)}/><div className="absolute right-0 top-11 z-40 rounded-xl bg-[#18181D] border border-white/10 p-1 shadow-xl"><button type="button" aria-label="Müziği kaldır" onClick={() => { setShowTrackMenu(false); if (window.confirm('Bu müzik kütüphanenden kaldırılsın mı?')) hideMusic(currentTrack); }} className="w-10 h-10 flex items-center justify-center rounded-lg text-[#D4AF37] hover:bg-white/[0.08]"><Trash2 className="w-4 h-4"/></button></div></>}</div>}
             </div>
             <p className="text-base text-[#D4AF37] font-medium">{currentTrack.artistName}</p>
             <p className="text-xs text-[#7C7970]">{currentTrack.licenseName}</p>
